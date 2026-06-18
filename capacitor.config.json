@@ -1,0 +1,6 @@
+{
+  "appId": "br.com.saborsan.catalogo",
+  "appName": "Saborsan Catálogo",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}

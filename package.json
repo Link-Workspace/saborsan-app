@@ -1,0 +1,26 @@
+{
+  "name": "saborsan-catalogo-app",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview",
+    "cap:init": "npx cap init Saborsan br.com.saborsan.catalogo --web-dir=dist",
+    "cap:add:android": "npx cap add android",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:open:android": "npx cap open android"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "vite": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "lucide-react": "latest",
+    "@capacitor/core": "latest",
+    "@capacitor/cli": "latest",
+    "@capacitor/android": "latest"
+  },
+  "devDependencies": {}
+}
