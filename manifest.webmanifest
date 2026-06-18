@@ -1,0 +1,17 @@
+{
+  "name": "Saborsan Catálogo",
+  "short_name": "Saborsan",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbf2e4",
+  "theme_color": "#f26a00",
+  "description": "Catálogo demonstrativo da Saborsan Distribuidora de Alimentos.",
+  "icons": [
+    {
+      "src": "/images/logo-saborsan.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
