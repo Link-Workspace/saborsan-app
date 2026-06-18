@@ -27,6 +27,8 @@ import {
 import { citiesData, demoOrders, products, sellerDemoData, upcomingProducts } from './data.js'
 import './styles.css'
 
+const BASE = import.meta.env.BASE_URL
+
 const categories = ['Todos', 'Pão de queijo', 'Assados', 'Açaí', 'Croissant', 'Salgados', 'Muito mais']
 const BRL_PHONE = '(49) 98421-0396'
 const PAYMENT_METHODS = ['PIX', 'À vista', 'Cartão de débito', 'Cartão de crédito', 'Boleto 30d', 'Boleto 60d']
@@ -202,7 +204,7 @@ function Header({ account, onAccountClick }) {
   return (
     <header className="app-header">
       <div className="logo-pill">
-        <img src="/images/logo-saborsan.png" alt="Saborsan" />
+        <img src={BASE + 'images/logo-saborsan.png'} alt="Saborsan" />
       </div>
       <button className="icon-btn" type="button" aria-label="Ver conta" onClick={onAccountClick}>
         {account ? <span className="avatar-mini">{account.email.charAt(0).toUpperCase()}</span> : <UserRound size={21} />}
@@ -221,7 +223,7 @@ function CatalogScreen({ query, setQuery, category, setCategory, products, onSel
           <p>A Saborsan entrega praticidade, variedade e confiança para o seu estabelecimento.</p>
         </div>
         <div className="hero-product">
-          <img src="/images/mini-pizza-1.jpg" alt="Mini pizza" />
+          <img src={BASE + 'images/mini-pizza-1.jpg'} alt="Mini pizza" />
         </div>
       </div>
 

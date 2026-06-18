@@ -1,3 +1,5 @@
+const BASE = import.meta.env.BASE_URL
+
 export const products = [
   {
     id: 'pao-queijo-tradicional',
@@ -5,7 +7,7 @@ export const products = [
     category: 'Pão de queijo',
     price: 'Sob consulta',
     badge: 'Mais procurado',
-    image: '/images/pao-de-queijo-real.jpg',
+    image: BASE + 'images/pao-de-queijo-real.jpg',
     description: 'Clássico, prático e perfeito para padarias, cafeterias e mercados.',
     details: 'Produto congelado com preparo rápido, textura macia e sabor marcante para operações comerciais que buscam praticidade e alto giro.',
     weight: 'Pacotes comerciais sob consulta',
@@ -19,7 +21,7 @@ export const products = [
     category: 'Assados',
     price: 'Sob consulta',
     badge: 'Vitrine',
-    image: '/images/assados-real.png',
+    image: BASE + 'images/assados-real.png',
     description: 'Produtos para alto giro, preparo rápido e ótima apresentação.',
     details: 'Linha ideal para compor vitrines, cardápios e combos com facilidade no preparo e excelente apresentação para o cliente final.',
     weight: 'Caixas para food service',
@@ -33,7 +35,7 @@ export const products = [
     category: 'Açaí',
     price: 'Sob consulta',
     badge: 'Verão',
-    image: '/images/acai-real.avif',
+    image: BASE + 'images/acai-real.avif',
     description: 'Ideal para tigelas, copos, sobremesas e combos comerciais.',
     details: 'Açaí cremoso para operações que precisam de sabor, praticidade e grande potencial de venda em dias quentes ou cardápios de sobremesa.',
     weight: 'Baldes e unidades sob consulta',
@@ -47,7 +49,7 @@ export const products = [
     category: 'Croissant',
     price: 'Sob consulta',
     badge: 'Cafeterias',
-    image: '/images/croissant-real.avif',
+    image: BASE + 'images/croissant-real.avif',
     description: 'Uma opção charmosa para cafés, hotéis, padarias e conveniências.',
     details: 'Produto versátil para ampliar o mix do estabelecimento, podendo ser servido puro, recheado ou como opção diferenciada de lanche.',
     weight: 'Unidades comerciais sob consulta',
@@ -61,7 +63,7 @@ export const products = [
     category: 'Assados',
     price: 'Sob consulta',
     badge: 'Alto giro',
-    image: '/images/mini-pizza-1.jpg',
+    image: BASE + 'images/mini-pizza-1.jpg',
     description: 'Perfeita para lanches rápidos, vitrines e combos de grande saída.',
     details: 'Mini pizza prática para estabelecimentos que querem oferecer uma opção saborosa, com boa apresentação e preparo simples.',
     weight: 'Formatos comerciais sob consulta',
@@ -75,7 +77,7 @@ export const products = [
     category: 'Salgados',
     price: 'Sob consulta',
     badge: 'Food service',
-    image: '/images/salgados-real.jpg',
+    image: BASE + 'images/salgados-real.jpg',
     description: 'Linha de salgados congelados para ampliar o catálogo do seu ponto de venda.',
     details: 'Alternativas práticas para quem deseja variedade, giro e facilidade na operação, com opções para diferentes momentos de consumo.',
     weight: 'Mix sob consulta',
@@ -89,7 +91,7 @@ export const products = [
     category: 'Muito mais',
     price: 'Sob consulta',
     badge: 'Mercados',
-    image: '/images/linha-mercados-real.png',
+    image: BASE + 'images/linha-mercados-real.png',
     description: 'Produtos congelados para compor gôndolas, freezers e pontos de venda.',
     details: 'Soluções para varejo alimentar com variedade e atendimento próximo, ajudando sua loja a oferecer opções práticas para os clientes.',
     weight: 'Pedidos sob demanda',
@@ -103,7 +105,7 @@ export const products = [
     category: 'Muito mais',
     price: 'Sob consulta',
     badge: 'Comercial',
-    image: '/images/linha-food-service-real.jpeg',
+    image: BASE + 'images/linha-food-service-real.jpeg',
     description: 'Produtos voltados para restaurantes, hotéis, cafeterias e cozinhas profissionais.',
     details: 'Mix de alimentos para apoiar operações comerciais que precisam de praticidade, consistência e variedade no cardápio.',
     weight: 'Formatos comerciais',
@@ -118,19 +120,19 @@ export const upcomingProducts = [
     title: 'Nova linha de empanadas',
     description: 'Sabores especiais para conquistar o paladar dos clientes em vitrines e combos.',
     month: 'Em breve',
-    image: '/images/salgados-real.jpg'
+    image: BASE + 'images/salgados-real.jpg'
   },
   {
     title: 'Polpas selecionadas',
     description: 'Mais sabores para sucos naturais, vitaminas e bebidas comerciais.',
     month: 'Novidade',
-    image: '/images/acai-real.avif'
+    image: BASE + 'images/acai-real.avif'
   },
   {
     title: 'Assados para cafeteria',
     description: 'Linha pensada para cafeterias, hotéis e padarias com preparo prático.',
     month: 'Chegando',
-    image: '/images/croissant-real.avif'
+    image: BASE + 'images/croissant-real.avif'
   }
 ]
 
