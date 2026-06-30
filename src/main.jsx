@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import { Conversation } from '@elevenlabs/client'
 import {
   Bell,
   Building2,
@@ -28,6 +29,16 @@ import { citiesData, demoOrders, products, sellerDemoData, upcomingProducts } fr
 import './styles.css'
 
 const BASE = import.meta.env.BASE_URL
+const API_URL = import.meta.env.VITE_API_URL || 'http://saborsan-api-c7bvfthfggfgergz.brazilsouth-01.azurewebsites.net'
+
+function getDeviceId() {
+  let id = localStorage.getItem('saborsan-device-id')
+  if (!id) {
+    id = crypto.randomUUID()
+    localStorage.setItem('saborsan-device-id', id)
+  }
+  return id
+}
 
 const categories = ['Todos', 'Pão de queijo', 'Assados', 'Açaí', 'Croissant', 'Salgados', 'Muito mais']
 const BRL_PHONE = '(49) 98421-0396'
@@ -161,7 +172,7 @@ function App() {
           )}
           {tab === 'news' && <NewsScreen onSelect={setSelectedProduct} />}
           {tab === 'account' && <AccountScreen account={account} orders={orders} setAccount={setAccount} onExplore={() => setTab('catalog')} onShowLogin={() => setShowLogin(true)} onShowSignup={() => setShowSignup(true)} onSelectOrder={setSelectedOrder} onSelectClient={setSelectedSellerClient} onShowRegisterSale={() => setShowRegisterSale(true)} />}
-          {tab === 'chat' && <ChatScreen />}
+          {tab === 'chat' && <ChatScreen account={account} />}
         </main>
 
         <BottomNav tab={tab} setTab={setTab} />
@@ -636,60 +647,231 @@ function OrderCard({ order, onSelect }) {
   )
 }
 
-function ChatScreen() {
-  const initialMessages = [
-    { id: 1, from: 'seller', type: 'text', text: 'Olá! Seja bem-vindo à Saborsan 👋 Como posso te ajudar hoje?', time: '09:10' },
-    { id: 2, from: 'user', type: 'text', text: 'Oi! Quero saber mais sobre os prazos de entrega.', time: '09:11' },
-    { id: 3, from: 'seller', type: 'text', text: 'Claro! Nossos prazos variam de 2 a 5 dias úteis dependendo da sua região. Qual cidade você está?', time: '09:11' },
-    { id: 4, from: 'seller', type: 'audio', duration: '0:08', time: '09:13' },
-  ]
+function ChatScreen({ account }) {
+  const deviceId = useMemo(() => getDeviceId(), [])
+  const welcomeMessage = useMemo(() => ({
+    id: 'welcome',
+    from: 'seller',
+    type: 'text',
+    text: 'Olá! Seja bem-vindo à Saborsan 👋 Como posso te ajudar hoje?',
+    time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  }), [])
 
-  const [messages, setMessages] = useState(initialMessages)
+  const [messages, setMessages] = useState([welcomeMessage])
   const [input, setInput] = useState('')
   const [isRecording, setIsRecording] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
   const [recordSeconds, setRecordSeconds] = useState(0)
   const [isCalling, setIsCalling] = useState(false)
+  const [callStatus, setCallStatus] = useState('idle')
+  const conversationRef = useRef(null)
+
+  useEffect(() => {
+    if (!isCalling) {
+      conversationRef.current?.endSession().catch(() => {})
+      conversationRef.current = null
+      setCallStatus('idle')
+      return
+    }
+
+    setCallStatus('connecting')
+    async function startCall() {
+      try {
+        const res = await fetch(`${API_URL}/api/elevenlabs-token`)
+        const { signedUrl } = await res.json()
+
+        const conversation = await Conversation.startSession({
+          signedUrl,
+          onConnect: () => setCallStatus('connected'),
+          onDisconnect: () => { setCallStatus('idle'); setIsCalling(false) },
+          onError: () => { setCallStatus('idle'); setIsCalling(false) },
+          onModeChange: ({ mode }) => setCallStatus(mode === 'speaking' ? 'speaking' : 'connected'),
+        })
+        conversationRef.current = conversation
+      } catch {
+        setCallStatus('idle')
+        setIsCalling(false)
+      }
+    }
+    startCall()
+  }, [isCalling])
+
+  function endCall() {
+    conversationRef.current?.endSession().catch(() => {})
+    conversationRef.current = null
+    setIsCalling(false)
+    setCallStatus('idle')
+  }
+
+  const callStatusLabel = {
+    connecting: 'Conectando…',
+    connected: 'Em chamada',
+    speaking: 'Falando…',
+  }[callStatus] ?? 'Chamando…'
   const [playingAudio, setPlayingAudio] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef(null)
   const timerRef = useRef(null)
+  const mediaRecorderRef = useRef(null)
+  const audioChunksRef = useRef([])
+  const streamRef = useRef(null)
+  const audioPlayerRef = useRef(null)
+
+  useEffect(() => {
+    async function loadHistory() {
+      try {
+        const res = await fetch(`${API_URL}/api/history?deviceId=${deviceId}`)
+        const data = await res.json()
+        if (data.messages && data.messages.length > 0) {
+          const loaded = data.messages.map((m, i) => ({
+            id: i + 1,
+            from: m.role === 'user' ? 'user' : 'seller',
+            type: 'text',
+            text: m.content,
+            time: new Date(m.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+          }))
+          setMessages([welcomeMessage, ...loaded])
+        }
+      } catch {
+        // mantém a mensagem de boas-vindas padrão
+      }
+    }
+    loadHistory()
+  }, [deviceId])
+
+  useEffect(() => {
+    if (!account?.email) return
+    fetch(`${API_URL}/api/link-user`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId, userId: account.email })
+    }).catch(() => {})
+  }, [account, deviceId])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   useEffect(() => {
-    if (isRecording) {
+    if (isRecording && !isPaused) {
       timerRef.current = setInterval(() => setRecordSeconds((s) => s + 1), 1000)
     } else {
       clearInterval(timerRef.current)
-      setRecordSeconds(0)
     }
+    if (!isRecording) setRecordSeconds(0)
     return () => clearInterval(timerRef.current)
-  }, [isRecording])
+  }, [isRecording, isPaused])
 
-  function sendText() {
-    if (!input.trim()) return
+  async function sendText() {
+    if (!input.trim() || isLoading) return
+    const text = input.trim()
     const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-    setMessages((m) => [...m, { id: Date.now(), from: 'user', type: 'text', text: input.trim(), time: now }])
+    setMessages((m) => [...m, { id: Date.now(), from: 'user', type: 'text', text, time: now }])
     setInput('')
-    setTimeout(() => {
+    setIsLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId, message: text })
+      })
+      const data = await res.json()
       const then = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-      setMessages((m) => [...m, { id: Date.now() + 1, from: 'seller', type: 'text', text: 'Obrigado pela mensagem! Em breve um de nossos vendedores entrará em contato. 😊', time: then }])
-    }, 1200)
+      setMessages((m) => [...m, { id: Date.now() + 1, from: 'seller', type: 'text', text: data.message, time: then }])
+    } catch {
+      const then = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      setMessages((m) => [...m, { id: Date.now() + 1, from: 'seller', type: 'text', text: 'Desculpe, ocorreu um erro. Tente novamente em instantes.', time: then }])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  function stopRecording() {
-    if (recordSeconds < 1) { setIsRecording(false); return }
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
+      const mediaRecorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data)
+      }
+      mediaRecorder.start()
+    } catch {
+      // sem permissão de microfone — continua como visual
+    }
+    setIsRecording(true)
+  }
+
+  async function stopRecording() {
+    if (recordSeconds < 1) { cancelRecording(); return }
     const duration = `0:${String(recordSeconds).padStart(2, '0')}`
     const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     setMessages((m) => [...m, { id: Date.now(), from: 'user', type: 'audio', duration, time: now }])
     setIsRecording(false)
+    setIsPaused(false)
+
+    const recorder = mediaRecorderRef.current
+    if (!recorder || recorder.state === 'inactive') return
+
+    setIsLoading(true)
+    try {
+      const audioBlob = await new Promise((resolve) => {
+        recorder.onstop = () => resolve(new Blob(audioChunksRef.current, { type: 'audio/webm' }))
+        recorder.stop()
+      })
+      streamRef.current?.getTracks().forEach((t) => t.stop())
+
+      const blobUrl = URL.createObjectURL(audioBlob)
+      setMessages((m) => m.map((msg) => msg.type === 'audio' && !msg.blobUrl ? { ...msg, blobUrl } : msg))
+
+      const formData = new FormData()
+      formData.append('audio', audioBlob, 'audio.webm')
+      const transcribeRes = await fetch(`${API_URL}/api/transcribe`, { method: 'POST', body: formData })
+      const { text } = await transcribeRes.json()
+
+      if (text) {
+        const chatRes = await fetch(`${API_URL}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deviceId, message: text })
+        })
+        const chatData = await chatRes.json()
+        const then = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        setMessages((m) => [...m, { id: Date.now() + 1, from: 'seller', type: 'text', text: chatData.message, time: then }])
+      }
+    } catch {
+      const then = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      setMessages((m) => [...m, { id: Date.now() + 1, from: 'seller', type: 'text', text: 'Não consegui processar o áudio. Tente novamente.', time: then }])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  function toggleAudio(id) {
-    if (playingAudio === id) { setPlayingAudio(null); return }
+  function cancelRecording() {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+      streamRef.current?.getTracks().forEach((t) => t.stop())
+    }
+    setIsRecording(false)
+    setIsPaused(false)
+  }
+
+  function toggleAudio(id, blobUrl) {
+    if (playingAudio === id) {
+      audioPlayerRef.current?.pause()
+      audioPlayerRef.current = null
+      setPlayingAudio(null)
+      return
+    }
+    audioPlayerRef.current?.pause()
+    if (blobUrl) {
+      const audio = new Audio(blobUrl)
+      audioPlayerRef.current = audio
+      audio.play()
+      audio.onended = () => setPlayingAudio(null)
+    }
     setPlayingAudio(id)
-    setTimeout(() => setPlayingAudio((p) => (p === id ? null : p)), 3000)
   }
 
   return (
@@ -718,7 +900,7 @@ function ChatScreen() {
               </div>
             ) : (
               <div className="chat-bubble audio-bubble">
-                <button type="button" className="audio-play-btn" onClick={() => toggleAudio(msg.id)} aria-label="Reproduzir áudio">
+                <button type="button" className="audio-play-btn" onClick={() => toggleAudio(msg.id, msg.blobUrl)} aria-label="Reproduzir áudio">
                   {playingAudio === msg.id ? <Pause size={16} /> : <Play size={16} />}
                 </button>
                 <div className="audio-waveform">
@@ -734,15 +916,31 @@ function ChatScreen() {
             )}
           </div>
         ))}
+        {isLoading && (
+          <div className="chat-bubble-wrap incoming">
+            <div className="chat-bubble typing-bubble">
+              <span /><span /><span />
+            </div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
       <div className="chat-input-bar">
         {isRecording ? (
           <div className="recording-bar">
-            <span className="rec-dot" />
+            <span className="rec-dot" style={{ background: isPaused ? '#aaa' : undefined }} />
             <span className="rec-timer">0:{String(recordSeconds).padStart(2, '0')}</span>
-            <span className="rec-label">Gravando áudio…</span>
+            <span className="rec-label">{isPaused ? 'Pausado' : 'Gravando áudio…'}</span>
+            <button type="button" className="rec-action-btn" onClick={() => {
+              if (isPaused) { mediaRecorderRef.current?.resume(); setIsPaused(false) }
+              else { mediaRecorderRef.current?.pause(); setIsPaused(true) }
+            }} aria-label={isPaused ? 'Retomar gravação' : 'Pausar gravação'}>
+              {isPaused ? <Play size={16} /> : <Pause size={16} />}
+            </button>
+            <button type="button" className="rec-action-btn cancel" onClick={cancelRecording} aria-label="Cancelar gravação">
+              <X size={16} />
+            </button>
             <button type="button" className="rec-stop-btn" onClick={stopRecording} aria-label="Enviar áudio">
               <Check size={18} />
             </button>
@@ -755,17 +953,17 @@ function ChatScreen() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendText()}
               placeholder="Mensagem"
+              disabled={isLoading}
             />
             {input.trim() ? (
-              <button type="button" className="chat-action-btn send" onClick={sendText} aria-label="Enviar mensagem">
+              <button type="button" className="chat-action-btn send" onClick={sendText} disabled={isLoading} aria-label="Enviar mensagem">
                 <Send size={19} />
               </button>
             ) : (
               <button
                 type="button"
                 className="chat-action-btn mic"
-                onMouseDown={() => setIsRecording(true)}
-                onTouchStart={(e) => { e.preventDefault(); setIsRecording(true) }}
+                onClick={startRecording}
                 aria-label="Gravar áudio"
               >
                 <Mic size={19} />
@@ -780,9 +978,9 @@ function ChatScreen() {
           <div className="calling-card">
             <div className="calling-avatar">S</div>
             <h2>Equipe Saborsan</h2>
-            <p className="calling-status">Chamando…</p>
+            <p className="calling-status">{callStatusLabel}</p>
             <p className="calling-number">{BRL_PHONE}</p>
-            <button type="button" className="end-call-btn" onClick={() => setIsCalling(false)} aria-label="Encerrar chamada">
+            <button type="button" className="end-call-btn" onClick={endCall} aria-label="Encerrar chamada">
               <Phone size={26} />
             </button>
           </div>
