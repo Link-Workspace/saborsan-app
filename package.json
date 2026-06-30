@@ -13,14 +13,15 @@
     "cap:open:android": "npx cap open android"
   },
   "dependencies": {
+    "@11labs/client": "^0.2.0",
+    "@capacitor/android": "latest",
+    "@capacitor/cli": "latest",
+    "@capacitor/core": "latest",
+    "@elevenlabs/client": "^1.14.0",
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
+    "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "lucide-react": "latest",
-    "@capacitor/core": "latest",
-    "@capacitor/cli": "latest",
-    "@capacitor/android": "latest"
-  },
-  "devDependencies": {}
+    "vite": "latest"
+  }
 }
