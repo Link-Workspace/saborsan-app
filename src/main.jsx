@@ -29,7 +29,7 @@ import { citiesData, demoOrders, products, sellerDemoData, upcomingProducts } fr
 import './styles.css'
 
 const BASE = import.meta.env.BASE_URL
-const API_URL = import.meta.env.VITE_API_URL || 'http://saborsan-api-c7bvfthfggfgergz.brazilsouth-01.azurewebsites.net'
+const API_URL = import.meta.env.VITE_API_URL || 'https://saborsan-api-c7bvfthfggfgergz.brazilsouth-01.azurewebsites.net'
 
 function getDeviceId() {
   let id = localStorage.getItem('saborsan-device-id')
