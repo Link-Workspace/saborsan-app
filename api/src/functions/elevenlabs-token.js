@@ -43,13 +43,11 @@ app.http('elevenlabs-token', {
       }
 
       const historyText = historyRecords.length
-        ? '\n\nContexto da conversa anterior por texto (use para responder com continuidade):\n' +
+        ? 'Contexto da conversa anterior por texto (use para responder com continuidade):\n' +
           historyRecords.map(m => `${m.role === 'user' ? 'Cliente' : 'Vendedor'}: ${m.content}`).join('\n')
         : '';
 
-      const fullPrompt = agentConfig.prompt + historyText;
-
-      return { jsonBody: { signedUrl: data.signed_url, fullPrompt } };
+      return { jsonBody: { signedUrl: data.signed_url, historyText } };
     } catch (error) {
       context.error('Erro na função elevenlabs-token:', error);
       return { status: 500, jsonBody: { error: 'Erro ao iniciar chamada' } };
