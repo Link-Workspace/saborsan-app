@@ -799,7 +799,16 @@ function ChatScreen({ account }) {
       })
       const data = await res.json()
       const then = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-      setMessages((m) => [...m, { id: Date.now() + 1, from: 'seller', type: 'text', text: data.message, time: then }])
+
+      if (data.audio) {
+        const bytes = Uint8Array.from(atob(data.audio), (c) => c.charCodeAt(0))
+        const blob = new Blob([bytes], { type: 'audio/mpeg' })
+        const blobUrl = URL.createObjectURL(blob)
+        const duration = `0:${String(Math.max(1, Math.floor(data.message.length / 15))).padStart(2, '0')}`
+        setMessages((m) => [...m, { id: Date.now() + 1, from: 'seller', type: 'audio', duration, time: then, blobUrl }])
+      } else {
+        setMessages((m) => [...m, { id: Date.now() + 1, from: 'seller', type: 'text', text: data.message, time: then }])
+      }
     } catch {
       const then = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
       setMessages((m) => [...m, { id: Date.now() + 1, from: 'seller', type: 'text', text: 'Desculpe, ocorreu um erro. Tente novamente em instantes.', time: then }])
