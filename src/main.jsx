@@ -687,25 +687,36 @@ function ChatScreen({ account }) {
   const [isCalling, setIsCalling] = useState(false)
   const [callStatus, setCallStatus] = useState('idle')
   const conversationRef = useRef(null)
-  const callTranscriptRef = useRef([])
   const callConversationIdRef = useRef(null)
+  const cleaningUpRef = useRef(false)
 
-  useEffect(() => {
-    if (!isCalling) {
-      const conv = conversationRef.current
-      conversationRef.current = null
-      if (conv) conv.endSession().catch(() => {})
-      setCallStatus('idle')
-      return
+  function cleanupCall(saveTranscript = true) {
+    if (cleaningUpRef.current) return
+    cleaningUpRef.current = true
+    const conv = conversationRef.current
+    conversationRef.current = null
+    setCallStatus('idle')
+    setIsCalling(false)
+    if (conv) conv.endSession().catch(() => {})
+    if (saveTranscript) {
+      const convId = callConversationIdRef.current
+      if (convId) {
+        fetch(`${API_URL}/api/save-transcript`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deviceId, conversationId: convId })
+        }).catch(() => {})
+      }
     }
+    setTimeout(() => { cleaningUpRef.current = false }, 1000)
+  }
 
+  function startCallSession() {
     setCallStatus('connecting')
     async function startCall() {
       try {
         const res = await fetch(`${API_URL}/api/elevenlabs-token?deviceId=${deviceId}`)
         const { signedUrl, fullPrompt } = await res.json()
-
-        callTranscriptRef.current = []
         callConversationIdRef.current = null
 
         const conversation = await Conversation.startSession({
@@ -715,42 +726,20 @@ function ChatScreen({ account }) {
             callConversationIdRef.current = conversationId
             setCallStatus('connected')
           },
-          onDisconnect: () => {
-            setCallStatus('idle')
-            setIsCalling(false)
-            const convId = callConversationIdRef.current
-            if (convId) {
-              fetch(`${API_URL}/api/save-transcript`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ deviceId, conversationId: convId })
-              }).catch(() => {})
-            }
-          },
-          onError: () => { setCallStatus('idle'); setIsCalling(false) },
+          onDisconnect: () => cleanupCall(true),
+          onError: () => cleanupCall(false),
           onModeChange: ({ mode }) => setCallStatus(mode === 'speaking' ? 'speaking' : 'connected'),
-          onMessage: ({ message, source }) => {
-            callTranscriptRef.current.push({
-              role: source === 'user' ? 'user' : 'assistant',
-              content: message
-            })
-          },
         })
         conversationRef.current = conversation
       } catch {
-        setCallStatus('idle')
-        setIsCalling(false)
+        cleanupCall(false)
       }
     }
     startCall()
-  }, [isCalling])
+  }
 
   function endCall() {
-    const conv = conversationRef.current
-    conversationRef.current = null
-    setIsCalling(false)
-    setCallStatus('idle')
-    if (conv) conv.endSession().catch(() => {})
+    cleanupCall(true)
   }
 
   const callStatusLabel = {
@@ -949,7 +938,7 @@ function ChatScreen({ account }) {
             <span>online agora</span>
           </div>
         </div>
-        <button className="chat-call-btn" type="button" onClick={() => setIsCalling(true)} aria-label="Ligar para o vendedor">
+        <button className="chat-call-btn" type="button" onClick={startCallSession} aria-label="Ligar para o vendedor">
           <Phone size={20} />
         </button>
       </div>
