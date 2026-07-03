@@ -687,6 +687,7 @@ function ChatScreen({ account }) {
   const [isCalling, setIsCalling] = useState(false)
   const [callStatus, setCallStatus] = useState('idle')
   const conversationRef = useRef(null)
+  const callTranscriptRef = useRef([])
 
   useEffect(() => {
     if (!isCalling) {
@@ -699,15 +700,34 @@ function ChatScreen({ account }) {
     setCallStatus('connecting')
     async function startCall() {
       try {
-        const res = await fetch(`${API_URL}/api/elevenlabs-token`)
-        const { signedUrl } = await res.json()
+        const res = await fetch(`${API_URL}/api/elevenlabs-token?deviceId=${deviceId}`)
+        const { signedUrl, historyContext } = await res.json()
+
+        callTranscriptRef.current = []
 
         const conversation = await Conversation.startSession({
           signedUrl,
+          overrides: historyContext ? { agent: { prompt: { prompt: historyContext } } } : undefined,
           onConnect: () => setCallStatus('connected'),
-          onDisconnect: () => { setCallStatus('idle'); setIsCalling(false) },
+          onDisconnect: () => {
+            setCallStatus('idle')
+            setIsCalling(false)
+            if (callTranscriptRef.current.length > 0) {
+              fetch(`${API_URL}/api/save-transcript`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ deviceId, messages: callTranscriptRef.current })
+              }).catch(() => {})
+            }
+          },
           onError: () => { setCallStatus('idle'); setIsCalling(false) },
           onModeChange: ({ mode }) => setCallStatus(mode === 'speaking' ? 'speaking' : 'connected'),
+          onMessage: ({ message, source }) => {
+            callTranscriptRef.current.push({
+              role: source === 'user' ? 'user' : 'assistant',
+              content: message
+            })
+          },
         })
         conversationRef.current = conversation
       } catch {
