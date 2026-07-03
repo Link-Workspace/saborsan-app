@@ -15,23 +15,43 @@ app.http('save-transcript', {
   handler: async (request, context) => {
     try {
       const body = await request.json();
-      const { deviceId, messages } = body;
+      const { deviceId, conversationId } = body;
 
-      if (!deviceId || !Array.isArray(messages) || messages.length === 0) {
-        return { status: 400, jsonBody: { error: 'deviceId e messages são obrigatórios' } };
+      if (!deviceId || !conversationId) {
+        return { status: 400, jsonBody: { error: 'deviceId e conversationId são obrigatórios' } };
+      }
+
+      // Buscar transcrição completa da chamada na API do ElevenLabs
+      const res = await fetch(
+        `https://api.elevenlabs.io/v1/convai/conversations/${conversationId}`,
+        { headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY } }
+      );
+
+      if (!res.ok) {
+        context.warn('ElevenLabs retornou erro ao buscar transcrição:', res.status);
+        return { status: 200, jsonBody: { success: false, reason: 'transcript_unavailable' } };
+      }
+
+      const data = await res.json();
+      const transcript = data.transcript || [];
+
+      if (transcript.length === 0) {
+        return { jsonBody: { success: true, saved: 0 } };
       }
 
       await sql.connect(sqlConfig);
 
-      for (const msg of messages) {
-        const role = msg.role === 'user' ? 'user' : 'assistant';
+      for (const entry of transcript) {
+        const role = entry.role === 'user' ? 'user' : 'assistant';
+        const content = entry.message || entry.content || '';
+        if (!content.trim()) continue;
         await sql.query`
           INSERT INTO Messages (deviceId, role, content, createdAt)
-          VALUES (${deviceId}, ${role}, ${msg.content}, GETUTCDATE())
+          VALUES (${deviceId}, ${role}, ${content}, GETUTCDATE())
         `;
       }
 
-      return { jsonBody: { success: true } };
+      return { jsonBody: { success: true, saved: transcript.length } };
     } catch (error) {
       context.error('Erro na função save-transcript:', error);
       return { status: 500, jsonBody: { error: 'Erro interno do servidor' } };

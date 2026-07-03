@@ -688,6 +688,7 @@ function ChatScreen({ account }) {
   const [callStatus, setCallStatus] = useState('idle')
   const conversationRef = useRef(null)
   const callTranscriptRef = useRef([])
+  const callConversationIdRef = useRef(null)
 
   useEffect(() => {
     if (!isCalling) {
@@ -704,19 +705,24 @@ function ChatScreen({ account }) {
         const { signedUrl, fullPrompt } = await res.json()
 
         callTranscriptRef.current = []
+        callConversationIdRef.current = null
 
         const conversation = await Conversation.startSession({
           signedUrl,
           overrides: fullPrompt ? { agent: { prompt: { prompt: fullPrompt } } } : undefined,
-          onConnect: () => setCallStatus('connected'),
+          onConnect: ({ conversationId }) => {
+            callConversationIdRef.current = conversationId
+            setCallStatus('connected')
+          },
           onDisconnect: () => {
             setCallStatus('idle')
             setIsCalling(false)
-            if (callTranscriptRef.current.length > 0) {
+            const convId = callConversationIdRef.current
+            if (convId) {
               fetch(`${API_URL}/api/save-transcript`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ deviceId, messages: callTranscriptRef.current })
+                body: JSON.stringify({ deviceId, conversationId: convId })
               }).catch(() => {})
             }
           },
