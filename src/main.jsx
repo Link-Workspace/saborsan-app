@@ -692,8 +692,9 @@ function ChatScreen({ account }) {
 
   useEffect(() => {
     if (!isCalling) {
-      conversationRef.current?.endSession().catch(() => {})
+      const conv = conversationRef.current
       conversationRef.current = null
+      if (conv) conv.endSession().catch(() => {})
       setCallStatus('idle')
       return
     }
@@ -745,10 +746,11 @@ function ChatScreen({ account }) {
   }, [isCalling])
 
   function endCall() {
-    conversationRef.current?.endSession().catch(() => {})
+    const conv = conversationRef.current
     conversationRef.current = null
     setIsCalling(false)
     setCallStatus('idle')
+    if (conv) conv.endSession().catch(() => {})
   }
 
   const callStatusLabel = {
