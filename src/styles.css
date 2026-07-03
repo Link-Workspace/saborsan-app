@@ -236,6 +236,18 @@ button { -webkit-tap-highlight-color: transparent; }
   box-shadow: 0 14px 36px rgba(8,47,99,.08);
   cursor: pointer;
 }
+.product-card.skeleton {
+  height: 112px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border: none;
+  box-shadow: none;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 .product-card img {
   width: 112px;
   height: 134px;

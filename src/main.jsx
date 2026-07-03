@@ -25,7 +25,7 @@ import {
   UserRound,
   X
 } from 'lucide-react'
-import { citiesData, demoOrders, products, sellerDemoData, upcomingProducts } from './data.js'
+import { citiesData, demoOrders, sellerDemoData, upcomingProducts } from './data.js'
 import './styles.css'
 
 const BASE = import.meta.env.BASE_URL
@@ -50,6 +50,8 @@ function App() {
   const [query, setQuery] = useState('')
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [authProduct, setAuthProduct] = useState(null)
+  const [dbProducts, setDbProducts] = useState([])
+  const [productsLoading, setProductsLoading] = useState(true)
   const [account, setAccount] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('saborsan-account-demo')) || null
@@ -72,7 +74,22 @@ function App() {
   const [showRegisterSale, setShowRegisterSale] = useState(false)
 
   useEffect(() => {
-    localStorage.setItem('saborsan-account-demo', JSON.stringify(account))
+    fetch(`${API_URL}/api/products`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.products) {
+          setDbProducts(data.products.map((p) => ({
+            ...p,
+            image: BASE + p.imageUrl,
+            weight: p.packaging,
+          })))
+        }
+      })
+      .catch(() => {})
+      .finally(() => setProductsLoading(false))
+  }, [])
+
+  useEffect(() => {
   }, [account])
 
   useEffect(() => {
@@ -87,12 +104,12 @@ function App() {
 
   const filteredProducts = useMemo(() => {
     const normalized = query.trim().toLowerCase()
-    return products.filter((product) => {
+    return dbProducts.filter((product) => {
       const byCategory = category === 'Todos' || product.category === category
       const byQuery = !normalized || `${product.name} ${product.category} ${product.description}`.toLowerCase().includes(normalized)
       return byCategory && byQuery
     })
-  }, [category, query])
+  }, [category, query, dbProducts])
 
   function startOrder(product) {
     if (!account) {
@@ -167,6 +184,7 @@ function App() {
               category={category}
               setCategory={setCategory}
               products={filteredProducts}
+              loading={productsLoading}
               onSelect={setSelectedProduct}
             />
           )}
@@ -224,7 +242,7 @@ function Header({ account, onAccountClick }) {
   )
 }
 
-function CatalogScreen({ query, setQuery, category, setCategory, products, onSelect }) {
+function CatalogScreen({ query, setQuery, category, setCategory, products, loading, onSelect }) {
   return (
     <section className="catalog-screen">
       <div className="hero-card-mobile">
@@ -256,11 +274,15 @@ function CatalogScreen({ query, setQuery, category, setCategory, products, onSel
           <span>Catálogo</span>
           <h2>Produtos em destaque</h2>
         </div>
-        <small>{products.length} itens</small>
+        <small>{loading ? '…' : `${products.length} itens`}</small>
       </div>
 
       <div className="product-list">
-        {products.map((product) => (
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="product-card skeleton" />
+          ))
+        ) : products.map((product) => (
           <button className="product-card" key={product.id} onClick={() => onSelect(product)}>
             <img src={product.image} alt={product.name} />
             <div>
