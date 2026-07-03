@@ -701,13 +701,13 @@ function ChatScreen({ account }) {
     async function startCall() {
       try {
         const res = await fetch(`${API_URL}/api/elevenlabs-token?deviceId=${deviceId}`)
-        const { signedUrl, historyContext } = await res.json()
+        const { signedUrl, fullPrompt } = await res.json()
 
         callTranscriptRef.current = []
 
         const conversation = await Conversation.startSession({
           signedUrl,
-          overrides: historyContext ? { agent: { prompt: { prompt: historyContext } } } : undefined,
+          overrides: fullPrompt ? { agent: { prompt: { prompt: fullPrompt } } } : undefined,
           onConnect: () => setCallStatus('connected'),
           onDisconnect: () => {
             setCallStatus('idle')

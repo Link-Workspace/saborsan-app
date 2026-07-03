@@ -1,5 +1,6 @@
 const { app } = require('@azure/functions');
 const sql = require('mssql');
+const { getAgentConfig } = require('../elevenlabs');
 
 const sqlConfig = {
   server: process.env.SQL_SERVER,
@@ -16,17 +17,24 @@ app.http('elevenlabs-token', {
     try {
       const deviceId = request.query.get('deviceId');
 
-      const [tokenRes, historyResult] = await Promise.all([
+      const [tokenRes, agentConfig] = await Promise.all([
         fetch(
           `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${process.env.ELEVENLABS_AGENT_ID}`,
           { headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY } }
         ),
-        deviceId
-          ? sql.connect(sqlConfig).then(() =>
-              sql.query`SELECT TOP 20 role, content FROM Messages WHERE deviceId = ${deviceId} ORDER BY createdAt DESC`
-            ).then(r => r.recordset.reverse()).catch(() => [])
-          : Promise.resolve([]),
+        getAgentConfig(),
       ]);
+
+      let historyRecords = [];
+      if (deviceId) {
+        try {
+          await sql.connect(sqlConfig);
+          const result = await sql.query`SELECT TOP 20 role, content FROM Messages WHERE deviceId = ${deviceId} ORDER BY createdAt DESC`;
+          historyRecords = result.recordset.reverse();
+        } catch (err) {
+          context.warn('Falha ao buscar histórico para ligação:', err);
+        }
+      }
 
       const data = await tokenRes.json();
       if (!data.signed_url) {
@@ -34,12 +42,14 @@ app.http('elevenlabs-token', {
         return { status: 500, jsonBody: { error: 'Erro ao obter URL de chamada' } };
       }
 
-      const historyContext = historyResult.length
-        ? '\n\nContexto da conversa anterior por texto:\n' +
-          historyResult.map(m => `${m.role === 'user' ? 'Cliente' : 'Vendedor'}: ${m.content}`).join('\n')
+      const historyText = historyRecords.length
+        ? '\n\nContexto da conversa anterior por texto (use para responder com continuidade):\n' +
+          historyRecords.map(m => `${m.role === 'user' ? 'Cliente' : 'Vendedor'}: ${m.content}`).join('\n')
         : '';
 
-      return { jsonBody: { signedUrl: data.signed_url, historyContext } };
+      const fullPrompt = agentConfig.prompt + historyText;
+
+      return { jsonBody: { signedUrl: data.signed_url, fullPrompt } };
     } catch (error) {
       context.error('Erro na função elevenlabs-token:', error);
       return { status: 500, jsonBody: { error: 'Erro ao iniciar chamada' } };
