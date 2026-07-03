@@ -25,7 +25,7 @@ import {
   UserRound,
   X
 } from 'lucide-react'
-import { citiesData, demoOrders, sellerDemoData, upcomingProducts } from './data.js'
+import { demoOrders, upcomingProducts } from './data.js'
 import './styles.css'
 
 const BASE = import.meta.env.BASE_URL
@@ -52,6 +52,8 @@ function App() {
   const [authProduct, setAuthProduct] = useState(null)
   const [dbProducts, setDbProducts] = useState([])
   const [productsLoading, setProductsLoading] = useState(true)
+  const [sellerData, setSellerData] = useState(null)
+  const [citiesData, setCitiesData] = useState([])
   const [account, setAccount] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('saborsan-account-demo')) || null
@@ -59,13 +61,7 @@ function App() {
       return null
     }
   })
-  const [orders, setOrders] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('saborsan-orders-demo')) || []
-    } catch {
-      return []
-    }
-  })
+  const [orders, setOrders] = useState([])
   const [toast, setToast] = useState('')
   const [showLogin, setShowLogin] = useState(false)
   const [showSignup, setShowSignup] = useState(false)
@@ -90,11 +86,27 @@ function App() {
   }, [])
 
   useEffect(() => {
+    localStorage.setItem('saborsan-account-demo', JSON.stringify(account))
+    if (account?.role === 'seller' && account?.id) {
+      fetch(`${API_URL}/api/seller-data?userId=${account.id}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.seller) setSellerData(data.seller)
+          if (data.cities) setCitiesData(data.cities)
+        })
+        .catch(() => {})
+    } else {
+      setSellerData(null)
+    }
+    if (account?.id && account?.role !== 'seller') {
+      fetch(`${API_URL}/api/orders?userId=${account.id}`)
+        .then(r => r.json())
+        .then(data => { if (data.orders) setOrders(data.orders) })
+        .catch(() => {})
+    } else if (!account) {
+      setOrders([])
+    }
   }, [account])
-
-  useEffect(() => {
-    localStorage.setItem('saborsan-orders-demo', JSON.stringify(orders))
-  }, [orders])
 
   useEffect(() => {
     if (!toast) return
@@ -120,24 +132,31 @@ function App() {
     confirmOrder(product)
   }
 
-  function confirmOrder(product) {
-    const order = {
-      id: `SAB-${Math.floor(1000 + Math.random() * 8999)}`,
-      product: product.name,
-      date: 'Agora',
-      orderDate: new Date().toLocaleDateString('pt-BR'),
-      deliveryDate: 'A confirmar',
-      quantity: '1 unidade',
-      status: 'Solicitado',
-      step: 1,
-      observations: '',
-      image: product.image
-    }
-    setOrders((current) => [order, ...current])
-    setToast(`Pedido de ${product.name} solicitado com sucesso.`)
+  async function confirmOrder(product) {
     setSelectedProduct(null)
     setAuthProduct(null)
     setTab('account')
+
+    if (account?.id) {
+      try {
+        const res = await fetch(`${API_URL}/api/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: account.id,
+            productId: product.id,
+            productName: product.name,
+            productImage: product.imageUrl || null,
+          }),
+        })
+        const data = await res.json()
+        if (data.order) setOrders(current => [data.order, ...current])
+      } catch {
+        setToast('Pedido enviado, mas houve um erro ao salvar.')
+        return
+      }
+    }
+    setToast(`Pedido de ${product.name} solicitado com sucesso.`)
   }
 
   async function handleAccountCreated(formData) {
@@ -208,10 +227,17 @@ function App() {
     setToast(`Venda para ${sale.client} registrada! Pedido ${sale.id}.`)
   }
 
-  function cancelOrder(orderId) {
+  async function cancelOrder(orderId) {
     setOrders((current) => current.filter((o) => o.id !== orderId))
     setSelectedOrder(null)
     setToast('Pedido cancelado.')
+    if (account?.id) {
+      fetch(`${API_URL}/api/orders`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, status: 'Cancelado', step: 0 })
+      }).catch(() => {})
+    }
   }
 
   return (
@@ -232,7 +258,7 @@ function App() {
             />
           )}
           {tab === 'news' && <NewsScreen onSelect={setSelectedProduct} />}
-          {tab === 'account' && <AccountScreen account={account} orders={orders} setAccount={setAccount} onExplore={() => setTab('catalog')} onShowLogin={() => setShowLogin(true)} onShowSignup={() => setShowSignup(true)} onSelectOrder={setSelectedOrder} onSelectClient={setSelectedSellerClient} onShowRegisterSale={() => setShowRegisterSale(true)} />}
+          {tab === 'account' && <AccountScreen account={account} orders={orders} setAccount={setAccount} onExplore={() => setTab('catalog')} onShowLogin={() => setShowLogin(true)} onShowSignup={() => setShowSignup(true)} onSelectOrder={setSelectedOrder} onSelectClient={setSelectedSellerClient} onShowRegisterSale={() => setShowRegisterSale(true)} sellerData={sellerData} />}
           {tab === 'chat' && <ChatScreen account={account} />}
         </main>
 
@@ -263,7 +289,7 @@ function App() {
         )}
 
         {showRegisterSale && (
-          <RegisterSaleSheet onClose={() => setShowRegisterSale(false)} onComplete={handleSaleComplete} />
+          <RegisterSaleSheet onClose={() => setShowRegisterSale(false)} onComplete={handleSaleComplete} products={dbProducts} citiesData={citiesData} />
         )}
 
         {toast && <div className="toast"><Check size={18} /> {toast}</div>}
@@ -575,11 +601,9 @@ function NewsScreen({ onSelect }) {
   )
 }
 
-function AccountScreen({ account, orders, setAccount, onExplore, onShowLogin, onShowSignup, onSelectOrder, onSelectClient, onShowRegisterSale }) {
-  const allOrders = account ? [...orders, ...demoOrders] : []
-
+function AccountScreen({ account, orders, setAccount, onExplore, onShowLogin, onShowSignup, onSelectOrder, onSelectClient, onShowRegisterSale, sellerData }) {
   if (account?.role === 'seller') {
-    return <SellerDashboard account={account} setAccount={setAccount} onSelectClient={onSelectClient} onShowRegisterSale={onShowRegisterSale} />
+    return <SellerDashboard account={account} setAccount={setAccount} onSelectClient={onSelectClient} onShowRegisterSale={onShowRegisterSale} sellerData={sellerData} />
   }
 
   return (
@@ -615,16 +639,16 @@ function AccountScreen({ account, orders, setAccount, onExplore, onShowLogin, on
               <span>Histórico</span>
               <h2>Compras e solicitações</h2>
             </div>
-            <small>{allOrders.length} registros</small>
+            <small>{orders.length} registros</small>
           </div>
 
           <div className="orders-list">
-            {allOrders.map((order) => (
+            {orders.map((order) => (
               <OrderCard key={order.id} order={order} onSelect={onSelectOrder} />
             ))}
           </div>
 
-          <button className="ghost-full" type="button" onClick={() => setAccount(null)}>Sair da conta demo</button>
+          <button className="ghost-full" type="button" onClick={() => setAccount(null)}>Sair da conta</button>
         </>
       )}
     </section>
@@ -1088,17 +1112,18 @@ function ChatScreen({ account }) {
   )
 }
 
-function SellerDashboard({ account, setAccount, onSelectClient, onShowRegisterSale }) {
-  const soldPercent = Math.round((sellerDemoData.sold / sellerDemoData.goal) * 100)
-  const remaining = sellerDemoData.goal - sellerDemoData.sold
+function SellerDashboard({ account, setAccount, onSelectClient, onShowRegisterSale, sellerData }) {
+  const data = sellerData || { name: '...', city: '...', goal: 0, sold: 0, totalClients: 0, alerts: [], clients: [] }
+  const soldPercent = data.goal > 0 ? Math.round((data.sold / data.goal) * 100) : 0
+  const remaining = data.goal - data.sold
 
   return (
     <section className="seller-dashboard">
       <div className="page-heading seller-welcome">
         <span className="small-badge seller-badge"><PackageCheck size={13} /> Vendedor externo</span>
-        <h1>Olá, {sellerDemoData.name.split(' ')[0]}!</h1>
-        <p>Rota de hoje: <strong>{sellerDemoData.city}</strong></p>
-        <small className="seller-date">Segunda, 17 de junho de 2026</small>
+        <h1>Olá, {data.name ? data.name.split(' ')[0] : account.email.split('@')[0]}!</h1>
+        <p>Rota de hoje: <strong>{data.city}</strong></p>
+        <small className="seller-date">{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</small>
       </div>
 
       <div className="goal-card">
@@ -1106,8 +1131,8 @@ function SellerDashboard({ account, setAccount, onSelectClient, onShowRegisterSa
           <div>
             <span className="goal-label">Meta do dia</span>
             <div className="goal-value-row">
-              <h2>R$ {sellerDemoData.sold.toLocaleString('pt-BR')}</h2>
-              <span>de R$ {sellerDemoData.goal.toLocaleString('pt-BR')}</span>
+              <h2>R$ {Number(data.sold).toLocaleString('pt-BR')}</h2>
+              <span>de R$ {Number(data.goal).toLocaleString('pt-BR')}</span>
             </div>
           </div>
           <div className="goal-ring" style={{ background: `conic-gradient(var(--orange) 0% ${soldPercent}%, rgba(8,47,99,.1) ${soldPercent}% 100%)` }}>
@@ -1118,8 +1143,8 @@ function SellerDashboard({ account, setAccount, onSelectClient, onShowRegisterSa
           <div className="goal-bar-fill" style={{ width: `${soldPercent}%` }} />
         </div>
         <div className="goal-bottom">
-          <span>Alcançado: <b>R$ {sellerDemoData.sold.toLocaleString('pt-BR')}</b></span>
-          <span>Faltam: <b>R$ {remaining.toLocaleString('pt-BR')}</b></span>
+          <span>Alcançado: <b>R$ {Number(data.sold).toLocaleString('pt-BR')}</b></span>
+          <span>Faltam: <b>R$ {Number(remaining).toLocaleString('pt-BR')}</b></span>
         </div>
       </div>
 
@@ -1129,7 +1154,7 @@ function SellerDashboard({ account, setAccount, onSelectClient, onShowRegisterSa
       </button>
 
       <div className="seller-alerts-list">
-        {sellerDemoData.alerts.map((alert) => (
+        {data.alerts.map((alert) => (
           <div key={alert.id} className={`seller-alert-item ${alert.type}`}>
             <Bell size={13} />
             <p>{alert.text}</p>
@@ -1142,11 +1167,11 @@ function SellerDashboard({ account, setAccount, onSelectClient, onShowRegisterSa
           <span>Clientes recomendados</span>
           <h2>Rota de hoje</h2>
         </div>
-        <small>{sellerDemoData.totalClients} clientes</small>
+        <small>{data.totalClients} clientes</small>
       </div>
 
-      {sellerDemoData.clients.map((client, i) => (
-        <button key={client.id} type="button" className={`client-rec-card`} onClick={() => onSelectClient(client)}>
+      {data.clients.map((client, i) => (
+        <button key={client.id} type="button" className="client-rec-card" onClick={() => onSelectClient(client)}>
           <div className="client-rec-rank">{i + 1}</div>
           <div className="client-rec-body">
             <div className="client-rec-top">
@@ -1298,7 +1323,7 @@ function ClientDetailSheet({ client, onClose }) {
   )
 }
 
-function RegisterSaleSheet({ onClose, onComplete }) {
+function RegisterSaleSheet({ onClose, onComplete, products, citiesData }) {
   const [step, setStep] = useState('city')
   const [selectedCity, setSelectedCity] = useState(null)
   const [selectedClient, setSelectedClient] = useState(null)
