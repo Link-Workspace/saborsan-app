@@ -721,7 +721,9 @@ function ChatScreen({ account }) {
 
         const conversation = await Conversation.startSession({
           signedUrl,
-          dynamicVariables: { historico_texto: historyText || 'Sem histórico anterior.' },
+          overrides: {
+            dynamicVariables: { historico_texto: historyText || 'Sem histórico anterior.' },
+          },
           onConnect: ({ conversationId }) => {
             callConversationIdRef.current = conversationId
             setCallStatus('connected')
