@@ -712,6 +712,7 @@ function ChatScreen({ account }) {
   }
 
   function startCallSession() {
+    setIsCalling(true)
     setCallStatus('connecting')
     async function startCall() {
       try {
@@ -721,9 +722,7 @@ function ChatScreen({ account }) {
 
         const conversation = await Conversation.startSession({
           signedUrl,
-          overrides: {
-            dynamicVariables: { historico_texto: historyText || 'Sem histórico anterior.' },
-          },
+          dynamicVariables: { historico_texto: historyText || 'Sem histórico anterior.' },
           onConnect: ({ conversationId }) => {
             callConversationIdRef.current = conversationId
             setCallStatus('connected')
