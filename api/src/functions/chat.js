@@ -15,13 +15,25 @@ const sqlConfig = {
   },
 };
 
-const SYSTEM_PROMPT = `Você é um vendedor virtual da Saborsan, empresa especializada em produtos alimentícios como salgados, pães de queijo, croissants e açaís.
+const BASE_SYSTEM_PROMPT = `Você é um vendedor virtual da Saborsan, empresa especializada em produtos alimentícios como salgados, pães de queijo, croissants e açaís.
 
 Seu objetivo é ajudar o cliente a conhecer os produtos, tirar dúvidas e orientar sobre como fazer pedidos.
 
 Seja simpático, objetivo e profissional. Quando relevante, pergunte o nome do cliente para personalizar o atendimento.
 
-Se o cliente quiser fazer um pedido ou precisar de informações específicas da conta dele, informe que ele pode fazer login para facilitar o processo.`;
+Se o cliente quiser fazer um pedido ou precisar de informações específicas da conta dele, informe que ele pode fazer login para facilitar o processo.
+
+Use as informações dos produtos abaixo para responder com precisão sobre o catálogo atual:
+
+{PRODUCTS}`;
+
+function buildSystemPrompt(products) {
+  if (!products.length) return BASE_SYSTEM_PROMPT.replace('{PRODUCTS}', 'Catálogo temporariamente indisponível.');
+  const list = products.map((p) =>
+    `- ${p.name} (${p.category}): ${p.description}. Embalagem: ${p.packaging}. Conservação: ${p.conservation}. Preparo: ${p.preparation}. Ideal para: ${p.idealFor}. Preço: ${p.price}. Quantidade disponível: ${p.availableQuantity}.`
+  ).join('\n');
+  return BASE_SYSTEM_PROMPT.replace('{PRODUCTS}', list);
+}
 
 app.http('chat', {
   methods: ['POST'],
@@ -37,13 +49,11 @@ app.http('chat', {
 
       await sql.connect(sqlConfig);
 
-      // Buscar histórico recente da conversa (últimas 10 mensagens)
-      const historyResult = await sql.query`
-        SELECT TOP 10 role, content
-        FROM Messages
-        WHERE deviceId = ${deviceId}
-        ORDER BY createdAt DESC
-      `;
+      // Buscar produtos e histórico em paralelo
+      const [productsResult, historyResult] = await Promise.all([
+        sql.query`SELECT name, category, description, packaging, conservation, preparation, idealFor, price, availableQuantity FROM Products WHERE active = 1`,
+        sql.query`SELECT TOP 10 role, content FROM Messages WHERE deviceId = ${deviceId} ORDER BY createdAt DESC`,
+      ]);
 
       const history = historyResult.recordset.reverse().map(row => ({
         role: row.role,
@@ -51,7 +61,7 @@ app.http('chat', {
       }));
 
       const messages = [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: buildSystemPrompt(productsResult.recordset) },
         ...history,
         { role: 'user', content: message },
       ];
