@@ -140,24 +140,67 @@ function App() {
     setTab('account')
   }
 
-  function handleAccountCreated(newAccount) {
-    setAccount(newAccount)
-    setToast('Conta criada com sucesso. O pedido foi continuado automaticamente.')
-    if (authProduct) {
-      confirmOrder(authProduct)
+  async function handleAccountCreated(formData) {
+    try {
+      const res = await fetch(`${API_URL}/api/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          whatsapp: formData.whatsapp,
+          isCompany: formData.isCompany,
+          cnpj: formData.cnpj,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setAccount(data.user)
+      setToast('Conta criada com sucesso. O pedido foi continuado automaticamente.')
+      if (authProduct) confirmOrder(authProduct)
+    } catch (err) {
+      setToast(err.message || 'Erro ao criar conta. Tente novamente.')
     }
   }
 
-  function handleLogin(credentials) {
-    setAccount(credentials)
-    setShowLogin(false)
-    setToast('Bem-vindo de volta!')
+  async function handleLogin(credentials) {
+    try {
+      const res = await fetch(`${API_URL}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: credentials.email, password: credentials.password }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setAccount({ ...data.user, role: credentials.isSeller ? 'seller' : data.user.role })
+      setShowLogin(false)
+      setToast('Bem-vindo de volta!')
+    } catch (err) {
+      setToast(err.message || 'Erro ao entrar. Verifique suas credenciais.')
+    }
   }
 
-  function handleSignup(newAccount) {
-    setAccount(newAccount)
-    setShowSignup(false)
-    setToast('Conta criada com sucesso!')
+  async function handleSignup(formData) {
+    try {
+      const res = await fetch(`${API_URL}/api/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          whatsapp: formData.whatsapp,
+          isCompany: formData.isCompany,
+          cnpj: formData.cnpj,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setAccount(data.user)
+      setShowSignup(false)
+      setToast('Conta criada com sucesso!')
+    } catch (err) {
+      setToast(err.message || 'Erro ao criar conta. Tente novamente.')
+    }
   }
 
   function handleSaleComplete(sale) {
