@@ -1,5 +1,6 @@
 const { app } = require('@azure/functions');
 const { OpenAI } = require('openai');
+const { uploadAudio } = require('../storage');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -17,15 +18,15 @@ app.http('transcribe', {
 
       const arrayBuffer = await audioFile.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-      const file = new File([buffer], 'audio.webm', { type: audioFile.type || 'audio/webm' });
+      const mimeType = audioFile.type || 'audio/webm';
+      const file = new File([buffer], 'audio.webm', { type: mimeType });
 
-      const transcription = await openai.audio.transcriptions.create({
-        file,
-        model: 'whisper-1',
-        language: 'pt',
-      });
+      const [transcription, audioUrl] = await Promise.all([
+        openai.audio.transcriptions.create({ file, model: 'whisper-1', language: 'pt' }),
+        uploadAudio(buffer, mimeType, 'audio-clientes').catch(() => null),
+      ]);
 
-      return { jsonBody: { text: transcription.text } };
+      return { jsonBody: { text: transcription.text, audioUrl } };
     } catch (error) {
       context.error('Erro na função transcribe:', error);
       return { status: 500, jsonBody: { error: 'Erro interno do servidor' } };

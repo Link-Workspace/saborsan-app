@@ -25,7 +25,7 @@ import {
   UserRound,
   X
 } from 'lucide-react'
-import { citiesData, demoOrders, products, sellerDemoData, upcomingProducts } from './data.js'
+import { citiesData, demoOrders, sellerDemoData, upcomingProducts } from './data.js'
 import './styles.css'
 
 const BASE = import.meta.env.BASE_URL
@@ -50,6 +50,8 @@ function App() {
   const [query, setQuery] = useState('')
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [authProduct, setAuthProduct] = useState(null)
+  const [dbProducts, setDbProducts] = useState([])
+  const [productsLoading, setProductsLoading] = useState(true)
   const [account, setAccount] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('saborsan-account-demo')) || null
@@ -72,7 +74,22 @@ function App() {
   const [showRegisterSale, setShowRegisterSale] = useState(false)
 
   useEffect(() => {
-    localStorage.setItem('saborsan-account-demo', JSON.stringify(account))
+    fetch(`${API_URL}/api/products`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.products) {
+          setDbProducts(data.products.map((p) => ({
+            ...p,
+            image: BASE + p.imageUrl,
+            weight: p.packaging,
+          })))
+        }
+      })
+      .catch(() => {})
+      .finally(() => setProductsLoading(false))
+  }, [])
+
+  useEffect(() => {
   }, [account])
 
   useEffect(() => {
@@ -87,12 +104,12 @@ function App() {
 
   const filteredProducts = useMemo(() => {
     const normalized = query.trim().toLowerCase()
-    return products.filter((product) => {
+    return dbProducts.filter((product) => {
       const byCategory = category === 'Todos' || product.category === category
       const byQuery = !normalized || `${product.name} ${product.category} ${product.description}`.toLowerCase().includes(normalized)
       return byCategory && byQuery
     })
-  }, [category, query])
+  }, [category, query, dbProducts])
 
   function startOrder(product) {
     if (!account) {
@@ -167,6 +184,7 @@ function App() {
               category={category}
               setCategory={setCategory}
               products={filteredProducts}
+              loading={productsLoading}
               onSelect={setSelectedProduct}
             />
           )}
@@ -224,7 +242,7 @@ function Header({ account, onAccountClick }) {
   )
 }
 
-function CatalogScreen({ query, setQuery, category, setCategory, products, onSelect }) {
+function CatalogScreen({ query, setQuery, category, setCategory, products, loading, onSelect }) {
   return (
     <section className="catalog-screen">
       <div className="hero-card-mobile">
@@ -256,11 +274,15 @@ function CatalogScreen({ query, setQuery, category, setCategory, products, onSel
           <span>Catálogo</span>
           <h2>Produtos em destaque</h2>
         </div>
-        <small>{products.length} itens</small>
+        <small>{loading ? '…' : `${products.length} itens`}</small>
       </div>
 
       <div className="product-list">
-        {products.map((product) => (
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="product-card skeleton" />
+          ))
+        ) : products.map((product) => (
           <button className="product-card" key={product.id} onClick={() => onSelect(product)}>
             <img src={product.image} alt={product.name} />
             <div>
@@ -665,6 +687,7 @@ function ChatScreen({ account }) {
   const [isCalling, setIsCalling] = useState(false)
   const [callStatus, setCallStatus] = useState('idle')
   const conversationRef = useRef(null)
+  const callTranscriptRef = useRef([])
 
   useEffect(() => {
     if (!isCalling) {
@@ -677,15 +700,34 @@ function ChatScreen({ account }) {
     setCallStatus('connecting')
     async function startCall() {
       try {
-        const res = await fetch(`${API_URL}/api/elevenlabs-token`)
-        const { signedUrl } = await res.json()
+        const res = await fetch(`${API_URL}/api/elevenlabs-token?deviceId=${deviceId}`)
+        const { signedUrl, historyContext } = await res.json()
+
+        callTranscriptRef.current = []
 
         const conversation = await Conversation.startSession({
           signedUrl,
+          overrides: historyContext ? { agent: { prompt: { prompt: historyContext } } } : undefined,
           onConnect: () => setCallStatus('connected'),
-          onDisconnect: () => { setCallStatus('idle'); setIsCalling(false) },
+          onDisconnect: () => {
+            setCallStatus('idle')
+            setIsCalling(false)
+            if (callTranscriptRef.current.length > 0) {
+              fetch(`${API_URL}/api/save-transcript`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ deviceId, messages: callTranscriptRef.current })
+              }).catch(() => {})
+            }
+          },
           onError: () => { setCallStatus('idle'); setIsCalling(false) },
           onModeChange: ({ mode }) => setCallStatus(mode === 'speaking' ? 'speaking' : 'connected'),
+          onMessage: ({ message, source }) => {
+            callTranscriptRef.current.push({
+              role: source === 'user' ? 'user' : 'assistant',
+              content: message
+            })
+          },
         })
         conversationRef.current = conversation
       } catch {
@@ -726,8 +768,10 @@ function ChatScreen({ account }) {
           const loaded = data.messages.map((m, i) => ({
             id: i + 1,
             from: m.role === 'user' ? 'user' : 'seller',
-            type: 'text',
+            type: m.audioUrl ? 'audio' : 'text',
             text: m.content,
+            blobUrl: m.audioUrl || null,
+            duration: m.audioUrl ? `0:${String(Math.max(1, Math.floor(m.content.length / 15))).padStart(2, '0')}` : null,
             time: new Date(m.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
           }))
           setMessages([welcomeMessage, ...loaded])
@@ -777,7 +821,16 @@ function ChatScreen({ account }) {
       })
       const data = await res.json()
       const then = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-      setMessages((m) => [...m, { id: Date.now() + 1, from: 'seller', type: 'text', text: data.message, time: then }])
+
+      if (data.audio) {
+        const bytes = Uint8Array.from(atob(data.audio), (c) => c.charCodeAt(0))
+        const blob = new Blob([bytes], { type: 'audio/mpeg' })
+        const blobUrl = URL.createObjectURL(blob)
+        const duration = `0:${String(Math.max(1, Math.floor(data.message.length / 15))).padStart(2, '0')}`
+        setMessages((m) => [...m, { id: Date.now() + 1, from: 'seller', type: 'audio', duration, time: then, blobUrl }])
+      } else {
+        setMessages((m) => [...m, { id: Date.now() + 1, from: 'seller', type: 'text', text: data.message, time: then }])
+      }
     } catch {
       const then = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
       setMessages((m) => [...m, { id: Date.now() + 1, from: 'seller', type: 'text', text: 'Desculpe, ocorreu um erro. Tente novamente em instantes.', time: then }])
@@ -828,13 +881,17 @@ function ChatScreen({ account }) {
       const formData = new FormData()
       formData.append('audio', audioBlob, 'audio.webm')
       const transcribeRes = await fetch(`${API_URL}/api/transcribe`, { method: 'POST', body: formData })
-      const { text } = await transcribeRes.json()
+      const { text, audioUrl: clientAudioUrl } = await transcribeRes.json()
+
+      if (clientAudioUrl) {
+        setMessages((m) => m.map((msg) => msg.type === 'audio' && !msg.blobUrl ? { ...msg, blobUrl: clientAudioUrl } : msg))
+      }
 
       if (text) {
         const chatRes = await fetch(`${API_URL}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ deviceId, message: text })
+          body: JSON.stringify({ deviceId, message: text, audioUrl: clientAudioUrl || null })
         })
         const chatData = await chatRes.json()
         const then = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })

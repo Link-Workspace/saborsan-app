@@ -1,6 +1,8 @@
 const { app } = require('@azure/functions');
 const { OpenAI } = require('openai');
 const sql = require('mssql');
+const { uploadAudio } = require('../storage');
+const { getAgentConfig } = require('../elevenlabs');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -15,13 +17,41 @@ const sqlConfig = {
   },
 };
 
-const SYSTEM_PROMPT = `Você é um vendedor virtual da Saborsan, empresa especializada em produtos alimentícios como salgados, pães de queijo, croissants e açaís.
+const FALLBACK_PROMPT = `Você é um vendedor virtual da Saborsan, empresa especializada em produtos alimentícios. Seja simpático, objetivo e profissional.`;
 
-Seu objetivo é ajudar o cliente a conhecer os produtos, tirar dúvidas e orientar sobre como fazer pedidos.
+async function getVoiceId() {
+  const config = await getAgentConfig();
+  return config.voiceId;
+}
 
-Seja simpático, objetivo e profissional. Quando relevante, pergunte o nome do cliente para personalizar o atendimento.
+async function generateAudio(text) {
+  const voiceId = await getVoiceId();
+  if (!voiceId) return null;
+  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+    method: 'POST',
+    headers: {
+      'xi-api-key': process.env.ELEVENLABS_API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      text,
+      model_id: 'eleven_turbo_v2_5',
+      voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+    }),
+  });
+  if (!res.ok) return null;
+  const arrayBuffer = await res.arrayBuffer();
+  return Buffer.from(arrayBuffer).toString('base64');
+}
 
-Se o cliente quiser fazer um pedido ou precisar de informações específicas da conta dele, informe que ele pode fazer login para facilitar o processo.`;
+function buildSystemPrompt(agentPrompt, products) {
+  const base = agentPrompt || FALLBACK_PROMPT;
+  if (!products.length) return `${base}\n\nCatálogo: temporariamente indisponível.`;
+  const list = products.map((p) =>
+    `- ${p.name} (${p.category}): ${p.description}. Embalagem: ${p.packaging}. Conservação: ${p.conservation}. Preparo: ${p.preparation}. Ideal para: ${p.idealFor}. Preço: ${p.price}. Quantidade disponível: ${p.availableQuantity}.`
+  ).join('\n');
+  return `${base}\n\nUse as informações do catálogo abaixo para responder com precisão:\n${list}`;
+}
 
 app.http('chat', {
   methods: ['POST'],
@@ -29,7 +59,7 @@ app.http('chat', {
   handler: async (request, context) => {
     try {
       const body = await request.json();
-      const { deviceId, message } = body;
+      const { deviceId, message, audioUrl: clientAudioUrl } = body;
 
       if (!deviceId || !message) {
         return { status: 400, jsonBody: { error: 'deviceId e message são obrigatórios' } };
@@ -37,13 +67,11 @@ app.http('chat', {
 
       await sql.connect(sqlConfig);
 
-      // Buscar histórico recente da conversa (últimas 10 mensagens)
-      const historyResult = await sql.query`
-        SELECT TOP 10 role, content
-        FROM Messages
-        WHERE deviceId = ${deviceId}
-        ORDER BY createdAt DESC
-      `;
+      const [productsResult, historyResult, agentConfig] = await Promise.all([
+        sql.query`SELECT name, category, description, packaging, conservation, preparation, idealFor, price, availableQuantity FROM Products WHERE active = 1`,
+        sql.query`SELECT TOP 10 role, content FROM Messages WHERE deviceId = ${deviceId} ORDER BY createdAt DESC`,
+        getAgentConfig(),
+      ]);
 
       const history = historyResult.recordset.reverse().map(row => ({
         role: row.role,
@@ -51,18 +79,16 @@ app.http('chat', {
       }));
 
       const messages = [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: buildSystemPrompt(agentConfig.prompt, productsResult.recordset) },
         ...history,
         { role: 'user', content: message },
       ];
 
-      // Salvar mensagem do usuário
       await sql.query`
-        INSERT INTO Messages (deviceId, role, content, createdAt)
-        VALUES (${deviceId}, 'user', ${message}, GETUTCDATE())
+        INSERT INTO Messages (deviceId, role, content, audioUrl, createdAt)
+        VALUES (${deviceId}, 'user', ${message}, ${clientAudioUrl || null}, GETUTCDATE())
       `;
 
-      // Chamar OpenAI
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages,
@@ -71,13 +97,35 @@ app.http('chat', {
 
       const assistantMessage = completion.choices[0].message.content;
 
-      // Salvar resposta do assistente
       await sql.query`
         INSERT INTO Messages (deviceId, role, content, createdAt)
         VALUES (${deviceId}, 'assistant', ${assistantMessage}, GETUTCDATE())
       `;
 
-      return { jsonBody: { message: assistantMessage } };
+      let audio = null;
+      let audioUrl = null;
+      if (assistantMessage.length > 280) {
+        try {
+          const audioBase64 = await generateAudio(assistantMessage);
+          if (audioBase64) {
+            audio = audioBase64;
+            const buffer = Buffer.from(audioBase64, 'base64');
+            audioUrl = await uploadAudio(buffer, 'audio/mpeg', 'audio-vendedor');
+          }
+        } catch (err) {
+          context.warn('Falha ao gerar áudio:', err);
+        }
+      }
+
+      if (audioUrl) {
+        await sql.query`
+          UPDATE Messages SET audioUrl = ${audioUrl}
+          WHERE deviceId = ${deviceId} AND role = 'assistant'
+          AND createdAt = (SELECT MAX(createdAt) FROM Messages WHERE deviceId = ${deviceId} AND role = 'assistant')
+        `;
+      }
+
+      return { jsonBody: { message: assistantMessage, ...(audio ? { audio } : {}) } };
     } catch (error) {
       context.error('Erro na função chat:', error);
       return { status: 500, jsonBody: { error: 'Erro interno do servidor' } };
