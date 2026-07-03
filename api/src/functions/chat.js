@@ -1,6 +1,7 @@
 const { app } = require('@azure/functions');
 const { OpenAI } = require('openai');
 const sql = require('mssql');
+const { uploadAudio } = require('../storage');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -75,7 +76,7 @@ app.http('chat', {
   handler: async (request, context) => {
     try {
       const body = await request.json();
-      const { deviceId, message } = body;
+      const { deviceId, message, audioUrl: clientAudioUrl } = body;
 
       if (!deviceId || !message) {
         return { status: 400, jsonBody: { error: 'deviceId e message são obrigatórios' } };
@@ -100,8 +101,8 @@ app.http('chat', {
       ];
 
       await sql.query`
-        INSERT INTO Messages (deviceId, role, content, createdAt)
-        VALUES (${deviceId}, 'user', ${message}, GETUTCDATE())
+        INSERT INTO Messages (deviceId, role, content, audioUrl, createdAt)
+        VALUES (${deviceId}, 'user', ${message}, ${clientAudioUrl || null}, GETUTCDATE())
       `;
 
       const completion = await openai.chat.completions.create({
@@ -119,12 +120,27 @@ app.http('chat', {
 
       // Gerar áudio quando a resposta for uma explicação longa (> 280 chars)
       let audio = null;
+      let audioUrl = null;
       if (assistantMessage.length > 280) {
         try {
-          audio = await generateAudio(assistantMessage);
+          const audioBase64 = await generateAudio(assistantMessage);
+          if (audioBase64) {
+            audio = audioBase64;
+            const buffer = Buffer.from(audioBase64, 'base64');
+            audioUrl = await uploadAudio(buffer, 'audio/mpeg', 'audio-vendedor');
+          }
         } catch (err) {
           context.warn('Falha ao gerar áudio:', err);
         }
+      }
+
+      // Atualizar registro com audioUrl se gerado
+      if (audioUrl) {
+        await sql.query`
+          UPDATE Messages SET audioUrl = ${audioUrl}
+          WHERE deviceId = ${deviceId} AND role = 'assistant'
+          AND createdAt = (SELECT MAX(createdAt) FROM Messages WHERE deviceId = ${deviceId} AND role = 'assistant')
+        `;
       }
 
       return { jsonBody: { message: assistantMessage, ...(audio ? { audio } : {}) } };

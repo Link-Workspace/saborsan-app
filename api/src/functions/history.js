@@ -26,7 +26,7 @@ app.http('history', {
       await sql.connect(sqlConfig);
 
       const result = await sql.query`
-        SELECT role, content, createdAt
+        SELECT role, content, createdAt, audioUrl
         FROM Messages
         WHERE deviceId = ${deviceId}
         ORDER BY createdAt ASC

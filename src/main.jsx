@@ -748,8 +748,10 @@ function ChatScreen({ account }) {
           const loaded = data.messages.map((m, i) => ({
             id: i + 1,
             from: m.role === 'user' ? 'user' : 'seller',
-            type: 'text',
+            type: m.audioUrl ? 'audio' : 'text',
             text: m.content,
+            blobUrl: m.audioUrl || null,
+            duration: m.audioUrl ? `0:${String(Math.max(1, Math.floor(m.content.length / 15))).padStart(2, '0')}` : null,
             time: new Date(m.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
           }))
           setMessages([welcomeMessage, ...loaded])
@@ -859,13 +861,17 @@ function ChatScreen({ account }) {
       const formData = new FormData()
       formData.append('audio', audioBlob, 'audio.webm')
       const transcribeRes = await fetch(`${API_URL}/api/transcribe`, { method: 'POST', body: formData })
-      const { text } = await transcribeRes.json()
+      const { text, audioUrl: clientAudioUrl } = await transcribeRes.json()
+
+      if (clientAudioUrl) {
+        setMessages((m) => m.map((msg) => msg.type === 'audio' && !msg.blobUrl ? { ...msg, blobUrl: clientAudioUrl } : msg))
+      }
 
       if (text) {
         const chatRes = await fetch(`${API_URL}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ deviceId, message: text })
+          body: JSON.stringify({ deviceId, message: text, audioUrl: clientAudioUrl || null })
         })
         const chatData = await chatRes.json()
         const then = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
