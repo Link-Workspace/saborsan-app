@@ -573,6 +573,8 @@ function EditProfileModal({ account, onClose, onSaved }) {
     whatsapp: account.whatsapp || '',
     address: account.address || '',
     cnpj: account.cnpj || '',
+    establishmentName: account.establishmentName || '',
+    invoicePreference: account.invoicePreference || 'whatsapp',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -611,6 +613,10 @@ function EditProfileModal({ account, onClose, onSaved }) {
           <input value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="Seu nome completo" />
         </label>
         <label>
+          Nome do estabelecimento
+          <input value={form.establishmentName} onChange={(e) => update('establishmentName', e.target.value)} placeholder="Ex: Padaria Bom Pão" />
+        </label>
+        <label>
           E-mail
           <input type="email" value={account.email} disabled style={{ opacity: 0.5 }} />
         </label>
@@ -628,6 +634,16 @@ function EditProfileModal({ account, onClose, onSaved }) {
             <input value={form.cnpj} onChange={(e) => update('cnpj', e.target.value)} placeholder="00.000.000/0000-00" />
           </label>
         )}
+        <label>Receber nota fiscal eletrônica por</label>
+        <div className="payment-grid" style={{ marginTop: '4px', marginBottom: '8px' }}>
+          {[{ value: 'whatsapp', label: 'WhatsApp' }, { value: 'email', label: 'E-mail' }, { value: 'ambos', label: 'Ambos' }].map(opt => (
+            <button key={opt.value} type="button"
+              className={`payment-btn ${form.invoicePreference === opt.value ? 'selected' : ''}`}
+              onClick={() => update('invoicePreference', opt.value)}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
         {error && <p style={{ color: '#e53e3e', fontSize: '13px', margin: '4px 0' }}>{error}</p>}
         <button className="primary-full" type="submit" disabled={loading}>
           {loading ? 'Salvando…' : 'Salvar informações'}

@@ -14,7 +14,7 @@ app.http('update-profile', {
   authLevel: 'anonymous',
   handler: async (request, context) => {
     try {
-      const { userId, name, whatsapp, address, cnpj } = await request.json();
+      const { userId, name, whatsapp, address, cnpj, establishmentName, invoicePreference } = await request.json();
 
       if (!userId) {
         return { status: 400, jsonBody: { error: 'userId é obrigatório' } };
@@ -28,12 +28,14 @@ app.http('update-profile', {
           name = COALESCE(${name || null}, name),
           whatsapp = COALESCE(${whatsapp || null}, whatsapp),
           address = ${address || null},
-          cnpj = COALESCE(${cnpj || null}, cnpj)
+          cnpj = COALESCE(${cnpj || null}, cnpj),
+          establishmentName = ${establishmentName || null},
+          invoicePreference = COALESCE(${invoicePreference || null}, invoicePreference)
         WHERE id = ${userId}
       `;
 
       const result = await sql.query`
-        SELECT id, email, whatsapp, isCompany, cnpj, role, name, address
+        SELECT id, email, whatsapp, isCompany, cnpj, role, name, address, establishmentName, invoicePreference
         FROM Users WHERE id = ${userId}
       `;
 

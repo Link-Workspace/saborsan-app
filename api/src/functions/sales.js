@@ -22,7 +22,7 @@ app.http('sales', {
 
         const result = await sql.query`
           SELECT s.id, s.payment, s.observations, s.saleDate, s.createdAt,
-                 c.name AS clientName, ci.name AS cityName
+                 c.establishmentName AS clientName, ci.name AS cityName
           FROM Sales s
           LEFT JOIN Clients c ON c.id = s.clientId
           LEFT JOIN Cities ci ON ci.id = c.cityId
