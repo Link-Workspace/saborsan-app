@@ -289,11 +289,11 @@ function App() {
         <BottomNav tab={tab} setTab={setTab} t={t} />
 
         {selectedProduct && (
-          <ProductSheet product={selectedProduct} onClose={() => setSelectedProduct(null)} onOrder={startOrder} />
+          <ProductSheet product={selectedProduct} onClose={() => setSelectedProduct(null)} onOrder={startOrder} t={t} />
         )}
 
         {authProduct && (
-          <CreateAccountModal product={authProduct} onClose={() => setAuthProduct(null)} onCreated={handleAccountCreated} />
+          <CreateAccountModal product={authProduct} onClose={() => setAuthProduct(null)} onCreated={handleAccountCreated} t={t} />
         )}
 
         {showLogin && (
@@ -305,15 +305,15 @@ function App() {
         )}
 
         {selectedOrder && (
-          <OrderDetailSheet order={selectedOrder} onClose={() => setSelectedOrder(null)} onCancel={cancelOrder} />
+          <OrderDetailSheet order={selectedOrder} onClose={() => setSelectedOrder(null)} onCancel={cancelOrder} t={t} />
         )}
 
         {selectedSellerClient && (
-          <ClientDetailSheet client={selectedSellerClient} onClose={() => setSelectedSellerClient(null)} />
+          <ClientDetailSheet client={selectedSellerClient} onClose={() => setSelectedSellerClient(null)} t={t} />
         )}
 
         {showRegisterSale && (
-          <RegisterSaleSheet onClose={() => setShowRegisterSale(false)} onComplete={handleSaleComplete} products={dbProducts} citiesData={citiesData} account={account} />
+          <RegisterSaleSheet onClose={() => setShowRegisterSale(false)} onComplete={handleSaleComplete} products={dbProducts} citiesData={citiesData} account={account} t={t} />
         )}
 
         {showCompleteProfile && account && account.role !== 'seller' && (
@@ -459,7 +459,7 @@ function CatalogScreen({ query, setQuery, category, setCategory, products, loadi
   )
 }
 
-function ProductSheet({ product, onClose, onOrder }) {
+function ProductSheet({ product, onClose, onOrder, t }) {
   return (
     <div className="sheet-backdrop" onClick={onClose}>
       <article className="product-sheet" onClick={(event) => event.stopPropagation()}>
@@ -480,16 +480,16 @@ function ProductSheet({ product, onClose, onOrder }) {
             <p>{product.details}</p>
 
             <div className="detail-grid">
-              <Detail label="Embalagem" value={product.weight} />
-              <Detail label="Conservação" value={product.conservation} />
-              <Detail label="Preparo" value={product.preparation} />
-              <Detail label="Ideal para" value={product.idealFor} />
+              <Detail label={t('product_packaging')} value={product.weight || product.packaging} />
+              <Detail label={t('product_conservation')} value={product.conservation} />
+              <Detail label={t('product_preparation')} value={product.preparation} />
+              <Detail label={t('product_ideal')} value={product.idealFor} />
             </div>
           </div>
         </div>
         <div className="sheet-footer">
           <button className="primary-full" type="button" onClick={() => onOrder(product)}>
-            Fazer pedido
+            {t('product_order')}
           </button>
         </div>
       </article>
@@ -506,7 +506,7 @@ function Detail({ label, value }) {
   )
 }
 
-function CreateAccountModal({ product, onClose, onCreated }) {
+function CreateAccountModal({ product, onClose, onCreated, t }) {
   const [form, setForm] = useState({ email: '', password: '', whatsapp: '', isCompany: false, cnpj: '' })
   const [success, setSuccess] = useState(false)
 
@@ -531,8 +531,8 @@ function CreateAccountModal({ product, onClose, onCreated }) {
           </div>
         ) : (
           <>
-            <span className="small-badge">Cadastro rápido</span>
-            <h2>Crie sua conta para fazer o pedido</h2>
+        <span className="small-badge">{t('signup_order_badge')}</span>
+            <h2>{t('signup_order_title')}</h2>
             <p className="modal-copy">Para solicitar <b>{product.name}</b>, preencha as informações abaixo. Esta é uma lógica demonstrativa e hardcoded.</p>
 
             <label>
@@ -998,9 +998,9 @@ function NewsScreen({ onSelect, t }) {
   return (
     <section className="news-screen">
       <div className="page-heading">
-        <span className="small-badge"><Sparkles size={15} /> Novidades</span>
-        <h1>Alimentos que estarão chegando em breve.</h1>
-        <p>Veja prévias de linhas e produtos que podem entrar no catálogo da Saborsan.</p>
+        <span className="small-badge"><Sparkles size={15} /> {t('news_badge')}</span>
+        <h1>{t('news_title')}</h1>
+        <p>{t('news_sub')}</p>
       </div>
 
       <div className="news-list">
@@ -1011,7 +1011,7 @@ function NewsScreen({ onSelect, t }) {
               <span>{item.month}</span>
               <h3>{item.title}</h3>
               <p>{item.description}</p>
-              <button type="button" onClick={() => onSelect(products[0])}>Tenho interesse</button>
+              <button type="button" onClick={() => onSelect(products[0])}>{t('news_interest')}</button>
             </div>
           </article>
         ))}
@@ -1020,8 +1020,8 @@ function NewsScreen({ onSelect, t }) {
       <div className="orange-panel">
         <Bell size={22} />
         <div>
-          <h3>Receba novidades no WhatsApp</h3>
-          <p>Quando o cliente demonstrar interesse, a equipe pode avisar sobre lançamentos, promoções e itens sazonais.</p>
+          <h3>{t('news_whatsapp_title')}</h3>
+          <p>{t('news_whatsapp_sub')}</p>
         </div>
       </div>
     </section>
@@ -1056,7 +1056,7 @@ function AccountScreen({ account, orders, setAccount, onExplore, onShowLogin, on
           <div className="account-card">
             <div className="avatar-large">{account.email.charAt(0).toUpperCase()}</div>
             <div>
-              <h2>{account.isCompany ? 'Conta empresarial' : 'Conta cliente'}</h2>
+              <h2>{account.isCompany ? t('account_company') : t('account_client')}</h2>
               <p>{account.email}</p>
               {account.name && <span>{account.name}</span>}
               <span>WhatsApp: {account.whatsapp}</span>
@@ -1098,8 +1098,8 @@ function AccountScreen({ account, orders, setAccount, onExplore, onShowLogin, on
   )
 }
 
-function OrderDetailSheet({ order, onClose, onCancel }) {
-  const steps = ['Solicitado', 'Em separação', 'Saiu para entrega', 'Entregue']
+function OrderDetailSheet({ order, onClose, onCancel, t }) {
+  const steps = [t('order_step1'), t('order_step2'), t('order_step3'), t('order_step4')]
   const canCancel = order.step <= 2
 
   return (
@@ -1113,19 +1113,19 @@ function OrderDetailSheet({ order, onClose, onCancel }) {
         <div className="sheet-body">
           <div className="order-detail-grid">
             <div className="order-detail-item">
-              <span>Quantidade</span>
+              <span>{t('order_quantity')}</span>
               <b>{order.quantity || '—'}</b>
             </div>
             <div className="order-detail-item">
-              <span>Data do pedido</span>
+              <span>{t('order_date')}</span>
               <b>{order.orderDate || order.date}</b>
             </div>
             <div className="order-detail-item">
-              <span>Previsão de entrega</span>
+              <span>{t('order_delivery')}</span>
               <b>{order.deliveryDate || '—'}</b>
             </div>
             <div className="order-detail-item">
-              <span>Status</span>
+              <span>{t('order_status')}</span>
               <b className="status-text">{order.status}</b>
             </div>
           </div>
@@ -1151,7 +1151,7 @@ function OrderDetailSheet({ order, onClose, onCancel }) {
 
           {canCancel && (
             <button className="cancel-order-btn" type="button" onClick={() => onCancel(order.id)}>
-              Cancelar pedido
+              {t('order_cancel')}
             </button>
           )}
         </div>
@@ -1555,7 +1555,7 @@ function ChatScreen({ account, t }) {
   )
 }
 
-function SellerDashboard({ account, setAccount, onSelectClient, onShowRegisterSale, sellerData }) {
+function SellerDashboard({ account, setAccount, onSelectClient, onShowRegisterSale, sellerData, t }) {
   const data = sellerData || { name: '...', city: '...', goal: 0, sold: 0, totalClients: 0, alerts: [], clients: [] }
   const soldPercent = data.goal > 0 ? Math.round((data.sold / data.goal) * 100) : 0
   const remaining = data.goal - data.sold
@@ -1563,16 +1563,16 @@ function SellerDashboard({ account, setAccount, onSelectClient, onShowRegisterSa
   return (
     <section className="seller-dashboard">
       <div className="page-heading seller-welcome">
-        <span className="small-badge seller-badge"><PackageCheck size={13} /> Vendedor externo</span>
-        <h1>Olá, {data.name ? data.name.split(' ')[0] : account.email.split('@')[0]}!</h1>
-        <p>Rota de hoje: <strong>{data.city}</strong></p>
+        <span className="small-badge seller-badge"><PackageCheck size={13} /> {t('seller_badge')}</span>
+        <h1>{t('seller_hello')} {data.name ? data.name.split(' ')[0] : account.email.split('@')[0]}!</h1>
+        <p>{t('seller_route_label')} <strong>{data.city}</strong></p>
         <small className="seller-date">{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</small>
       </div>
 
       <div className="goal-card">
         <div className="goal-top">
           <div>
-            <span className="goal-label">Meta do dia</span>
+            <span className="goal-label">{t('seller_goal')}</span>
             <div className="goal-value-row">
               <h2>R$ {Number(data.sold).toLocaleString('pt-BR')}</h2>
               <span>de R$ {Number(data.goal).toLocaleString('pt-BR')}</span>
@@ -1586,22 +1586,22 @@ function SellerDashboard({ account, setAccount, onSelectClient, onShowRegisterSa
           <div className="goal-bar-fill" style={{ width: `${soldPercent}%` }} />
         </div>
         <div className="goal-bottom">
-          <span>Alcançado: <b>R$ {Number(data.sold).toLocaleString('pt-BR')}</b></span>
-          <span>Faltam: <b>R$ {Number(remaining).toLocaleString('pt-BR')}</b></span>
+          <span>{t('seller_reached')} <b>R$ {Number(data.sold).toLocaleString('pt-BR')}</b></span>
+          <span>{t('seller_remaining')} <b>R$ {Number(remaining).toLocaleString('pt-BR')}</b></span>
         </div>
       </div>
 
       <button className="new-sale-btn" type="button" onClick={onShowRegisterSale}>
         <Plus size={20} />
-        <span>Registrar nova venda</span>
+        <span>{t('seller_new_sale')}</span>
       </button>
 
       <div className="section-title-row compact">
         <div>
-          <span>Clientes recomendados</span>
-          <h2>Rota de hoje</h2>
+          <span>{t('seller_clients')}</span>
+          <h2>{t('seller_route')}</h2>
         </div>
-        <small>{data.totalClients} clientes</small>
+        <small>{data.totalClients} {t('seller_clients_total')}</small>
       </div>
 
       {data.clients.map((client, i) => (
@@ -1617,8 +1617,8 @@ function SellerDashboard({ account, setAccount, onSelectClient, onShowRegisterSa
             </div>
             <p>{client.priorityReason}</p>
             <div className="client-rec-meta">
-              <span>Último: {client.lastPurchase}</span>
-              <span>Ticket: {client.avgTicket}</span>
+              <span>{t('seller_last')} {client.lastPurchase}</span>
+              <span>{t('seller_ticket')} {client.avgTicket}</span>
             </div>
           </div>
           <ChevronRight size={16} className="rec-arrow" />
@@ -1626,13 +1626,13 @@ function SellerDashboard({ account, setAccount, onSelectClient, onShowRegisterSa
       ))}
 
       <button className="ghost-full" type="button" style={{ marginTop: '8px' }} onClick={() => setAccount(null)}>
-        Sair da conta
+        {t('seller_logout')}
       </button>
     </section>
   )
 }
 
-function ClientDetailSheet({ client, onClose }) {
+function ClientDetailSheet({ client, onClose, t }) {
   const [visitResult, setVisitResult] = useState(null)
   const [showNoSale, setShowNoSale] = useState(false)
 
@@ -1652,9 +1652,9 @@ function ClientDetailSheet({ client, onClose }) {
             <div className={`visit-reg-icon ${visitResult === 'sold' ? 'success' : 'neutral'}`}>
               {visitResult === 'sold' ? <Check size={30} /> : <Clock3 size={30} />}
             </div>
-            <h2>{visitResult === 'sold' ? 'Venda registrada!' : 'Visita registrada!'}</h2>
-            <p>{visitResult === 'sold' ? `Venda confirmada para ${client.name}.` : `Motivo: ${visitResult}`}</p>
-            <button className="primary-full" type="button" onClick={onClose}>Voltar à rota</button>
+            <h2>{visitResult === 'sold' ? t('visit_sale_registered') : t('visit_registered')}</h2>
+            <p>{visitResult === 'sold' ? `${t('visit_sale_registered')} ${client.name}.` : `${visitResult}`}</p>
+            <button className="primary-full" type="button" onClick={onClose}>{t('visit_back')}</button>
           </div>
         ) : (
           <>
@@ -1663,7 +1663,7 @@ function ClientDetailSheet({ client, onClose }) {
               <div>
                 <h2>{client.name}</h2>
                 <p>{client.segment} · <span className={`prio-label prio-${client.priority}`}>
-                  {client.priority === 'alta' ? '● Prioridade alta' : client.priority === 'média' ? '● Prioridade média' : '● Prioridade baixa'}
+                  {client.priority === 'alta' ? t('client_priority_high') : client.priority === 'média' ? t('client_priority_mid') : t('client_priority_low')}
                 </span></p>
               </div>
             </div>
@@ -1672,15 +1672,15 @@ function ClientDetailSheet({ client, onClose }) {
               <div className="client-sheet-body">
                 <div className="client-metrics-grid">
                   <div className="order-detail-item">
-                    <span>Último pedido</span>
+                    <span>{t('client_last_purchase')}</span>
                     <b>{client.lastPurchase}</b>
                   </div>
                   <div className="order-detail-item">
-                    <span>Último valor</span>
+                    <span>{t('client_last_value')}</span>
                     <b>{client.lastValue}</b>
                   </div>
                   <div className="order-detail-item">
-                    <span>Ticket médio</span>
+                    <span>{t('client_avg_ticket')}</span>
                     <b>{client.avgTicket}</b>
                   </div>
                   <div className="order-detail-item">
@@ -1690,26 +1690,26 @@ function ClientDetailSheet({ client, onClose }) {
                 </div>
 
                 <div className="suggestion-box">
-                  <span>Sugestão de abordagem</span>
+                  <span>{t('client_suggestion')}</span>
                   <p>{client.suggestion}</p>
                 </div>
 
                 <div className="client-sheet-section">
-                  <h4>Produtos recomendados</h4>
+                  <h4>{t('client_recommended')}</h4>
                   <div className="tag-row">
                     {client.recommended.map((p) => <span key={p} className="ptag recommended">{p}</span>)}
                   </div>
                 </div>
 
                 <div className="client-sheet-section">
-                  <h4>Mais comprados</h4>
+                  <h4>{t('client_top')}</h4>
                   <div className="tag-row">
                     {client.topProducts.map((p) => <span key={p} className="ptag purchased">{p}</span>)}
                   </div>
                 </div>
 
                 <div className="client-sheet-section">
-                  <h4>Histórico de pedidos</h4>
+                  <h4>{t('client_orders_history')}</h4>
                   {client.orders.map((order) => (
                     <div key={order.id} className="client-order-row">
                       <div>
@@ -1725,7 +1725,7 @@ function ClientDetailSheet({ client, onClose }) {
                 </div>
 
                 <div className="client-sheet-section">
-                  <h4>Melhor dia para visitar</h4>
+                  <h4>{t('client_best_day')}</h4>
                   <span className="best-day-tag">{client.bestDay}</span>
                 </div>
               </div>
@@ -1734,11 +1734,11 @@ function ClientDetailSheet({ client, onClose }) {
             <div className="client-sheet-footer">
               <h4>Resultado desta visita</h4>
               <button className="visit-sold-btn" type="button" onClick={() => setVisitResult('sold')}>
-                Comprou
+                {t('visit_sold')}
               </button>
               {!showNoSale ? (
                 <button className="visit-nosale-btn" type="button" onClick={() => setShowNoSale(true)}>
-                  Não comprou — registrar motivo
+                  {t('visit_no_sale')}
                 </button>
               ) : (
                 <div className="nosale-reasons">
@@ -1757,7 +1757,7 @@ function ClientDetailSheet({ client, onClose }) {
   )
 }
 
-function RegisterSaleSheet({ onClose, onComplete, products, citiesData, account }) {
+function RegisterSaleSheet({ onClose, onComplete, products, citiesData, account, t }) {
   const [step, setStep] = useState('city')
   const [selectedCity, setSelectedCity] = useState(null)
   const [selectedClient, setSelectedClient] = useState(null)
@@ -1824,8 +1824,8 @@ function RegisterSaleSheet({ onClose, onComplete, products, citiesData, account 
             <div className="sale-step-header">
               <div className="sale-step-title">
                 <MapPin size={20} />
-                <h2>Onde você está?</h2>
-                <p>Selecione a cidade para esta venda</p>
+                <h2>{t('sale_where')}</h2>
+                <p>{t('sale_where_sub')}</p>
               </div>
             </div>
             <div className="city-list">
@@ -1848,12 +1848,12 @@ function RegisterSaleSheet({ onClose, onComplete, products, citiesData, account 
               <button type="button" className="sale-back-btn" onClick={() => setStep('city')}><ChevronLeft size={16} /> {selectedCity}</button>
               <div className="sale-step-title">
                 <UserRound size={20} />
-                <h2>Escolha o cliente</h2>
-                <p>Clientes em {selectedCity}</p>
+                <h2>{t('sale_client')}</h2>
+                <p>{t('sale_client_sub')} {selectedCity}</p>
               </div>
               <div className="sale-search">
                 <Search size={15} />
-                <input value={clientSearch} onChange={(e) => setClientSearch(e.target.value)} placeholder="Buscar cliente..." />
+                <input value={clientSearch} onChange={(e) => setClientSearch(e.target.value)} placeholder={t('sale_search_client')} />
               </div>
             </div>
             <div className="client-list-sale">
@@ -1877,16 +1877,16 @@ function RegisterSaleSheet({ onClose, onComplete, products, citiesData, account 
               <button type="button" className="sale-back-btn" onClick={() => setStep('client')}><ChevronLeft size={16} /> {selectedClient.name}</button>
               <div className="sale-step-title">
                 <ShoppingBag size={20} />
-                <h2>Detalhes da venda</h2>
-                <p>Para {selectedClient.name}</p>
+                <h2>{t('sale_details')}</h2>
+                <p>{t('sale_for')} {selectedClient?.name}</p>
               </div>
             </div>
             <div className="sale-form">
               <div className="sale-field">
-                <label>Produtos{hasProducts ? <span> · {selectedProductIds.length} selecionado{selectedProductIds.length > 1 ? 's' : ''}</span> : null}</label>
+                <label>{t('sale_products')}{hasProducts ? <span> · {selectedProductIds.length} {selectedProductIds.length > 1 ? t('common_plural_selected') : t('common_selected')}</span> : null}</label>
                 <div className="sale-search" style={{ marginBottom: '10px' }}>
                   <Search size={15} />
-                  <input value={productSearch} onChange={(e) => setProductSearch(e.target.value)} placeholder="Buscar produto..." />
+                  <input value={productSearch} onChange={(e) => setProductSearch(e.target.value)} placeholder={t('sale_search_product')} />
                 </div>
                 <div className="product-select-list">
                   {filteredProducts.map((p) => {
@@ -1913,7 +1913,7 @@ function RegisterSaleSheet({ onClose, onComplete, products, citiesData, account 
               </div>
 
               <div className="sale-field">
-                <label>Forma de pagamento</label>
+                <label>{t('sale_payment')}</label>
                 <div className="payment-grid">
                   {PAYMENT_METHODS.map((pm) => (
                     <button key={pm} type="button" className={`payment-btn ${form.payment === pm ? 'selected' : ''}`} onClick={() => setForm((f) => ({ ...f, payment: pm }))}>
@@ -1924,13 +1924,13 @@ function RegisterSaleSheet({ onClose, onComplete, products, citiesData, account 
               </div>
 
               <div className="sale-field">
-                <label>Observações <span>(opcional)</span></label>
-                <textarea value={form.observations} onChange={(e) => setForm((f) => ({ ...f, observations: e.target.value }))} placeholder="Ex: entregar no período da manhã..." rows={2} />
+                <label>{t('sale_obs')} <span>(opcional)</span></label>
+                <textarea value={form.observations} onChange={(e) => setForm((f) => ({ ...f, observations: e.target.value }))} placeholder={t('sale_obs_placeholder')} rows={2} />
               </div>
             </div>
             <div className="sale-footer">
               <button className="primary-full" type="button" disabled={!hasProducts || !form.payment} onClick={() => setStep('confirm')}>
-                Ver resumo
+                {t('sale_summary')}
               </button>
             </div>
           </>
@@ -1942,13 +1942,13 @@ function RegisterSaleSheet({ onClose, onComplete, products, citiesData, account 
               <button type="button" className="sale-back-btn" onClick={() => setStep('sale')}><ChevronLeft size={16} /> Editar</button>
               <div className="sale-step-title">
                 <Check size={20} />
-                <h2>Confirmar venda</h2>
-                <p>Revise os dados antes de finalizar</p>
+                <h2>{t('sale_confirm_title')}</h2>
+                <p>{t('sale_confirm_sub')}</p>
               </div>
             </div>
             <div className="confirm-summary">
-              <div className="confirm-row"><span>Cidade</span><b>{selectedCity}</b></div>
-              <div className="confirm-row"><span>Cliente</span><b>{selectedClient.name}</b></div>
+              <div className="confirm-row"><span>{t('sale_city')}</span><b>{selectedCity}</b></div>
+              <div className="confirm-row"><span>{t('sale_client_label')}</span><b>{selectedClient?.name}</b></div>
               <div className="confirm-row">
                 <span>Produtos</span>
                 <div className="confirm-products">
@@ -1958,12 +1958,12 @@ function RegisterSaleSheet({ onClose, onComplete, products, citiesData, account 
                   })}
                 </div>
               </div>
-              <div className="confirm-row"><span>Pagamento</span><b>{form.payment}</b></div>
+              <div className="confirm-row"><span>{t('sale_payment_label')}</span><b>{form.payment}</b></div>
               {form.observations ? <div className="confirm-row"><span>Observações</span><b>{form.observations}</b></div> : null}
             </div>
             <div className="sale-footer">
               <button className="primary-full" type="button" onClick={submitSale}>
-                Confirmar venda
+                {t('sale_finalize')}
               </button>
             </div>
           </>
