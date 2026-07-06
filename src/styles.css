@@ -99,6 +99,87 @@ button { -webkit-tap-highlight-color: transparent; }
   flex-direction: column;
   gap: 8px;
 }
+.account-menu-panel {
+  position: absolute;
+  top: 82px;
+  right: 12px;
+  background: var(--white);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(8,47,99,.16);
+  overflow: hidden;
+  z-index: 20;
+  min-width: 160px;
+}
+.account-menu-panel button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  color: var(--navy);
+  font-weight: 700;
+  font-size: .95rem;
+  cursor: pointer;
+  text-align: left;
+}
+.account-menu-panel button:last-child { border-bottom: none; }
+.account-menu-panel button:hover { background: var(--cream-2); }
+/* Settings */
+.settings-sheet { border-radius: 32px 32px 0 0; }
+.settings-section { margin: 8px 0 16px; display: flex; flex-direction: column; gap: 4px; }
+.settings-label { font-weight: 800; font-size: .9rem; color: var(--navy); display: block; margin-bottom: 6px; }
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.settings-row small { color: var(--muted); font-size: .8rem; display: block; margin-top: 2px; }
+.toggle-btn {
+  width: 48px; height: 26px;
+  border-radius: 999px;
+  background: #d1d5db;
+  border: none;
+  position: relative;
+  cursor: pointer;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+.toggle-btn.on { background: var(--orange); }
+.toggle-btn span {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.toggle-btn.on span { transform: translateX(22px); }
+.settings-link-btn {
+  background: none; border: none;
+  color: var(--navy); font-weight: 700;
+  font-size: .95rem; cursor: pointer;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  width: 100%;
+}
+.settings-link-btn:last-child { border-bottom: none; }
+.settings-delete-btn {
+  width: 100%; padding: 14px;
+  background: rgba(229,62,62,.08);
+  border: 1px solid rgba(229,62,62,.2);
+  border-radius: 14px;
+  color: #e53e3e; font-weight: 800;
+  cursor: pointer; font-size: .95rem;
+}
+.settings-delete-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.delete-confirm p { color: var(--muted); font-size: .9rem; line-height: 1.5; margin-bottom: 12px; }
 .logo-pill {
   background: rgba(255,255,255,.78);
   border: 1px solid var(--line);

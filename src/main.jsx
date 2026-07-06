@@ -25,7 +25,8 @@ import {
   UserRound,
   X
 } from 'lucide-react'
-import { demoOrders, upcomingProducts } from './data.js'
+import { citiesData as citiesDataStatic, demoOrders, upcomingProducts } from './data.js'
+import { makeT } from './translations.js'
 import './styles.css'
 
 const BASE = import.meta.env.BASE_URL
@@ -45,6 +46,13 @@ const BRL_PHONE = '(49) 98421-0396'
 const PAYMENT_METHODS = ['PIX', 'À vista', 'Cartão de débito', 'Cartão de crédito', 'Boleto 30d', 'Boleto 60d']
 
 function App() {
+  const [language, setLanguage] = useState(() => localStorage.getItem('saborsan-lang') || 'pt')
+  const t = useMemo(() => makeT(language), [language])
+
+  function handleLanguageChange(lang) {
+    localStorage.setItem('saborsan-lang', lang)
+    setLanguage(lang)
+  }
   const [tab, setTab] = useState('catalog')
   const [category, setCategory] = useState('Todos')
   const [query, setQuery] = useState('')
@@ -70,6 +78,7 @@ function App() {
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [selectedSellerClient, setSelectedSellerClient] = useState(null)
   const [showRegisterSale, setShowRegisterSale] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
 
   useEffect(() => {
     fetch(`${API_URL}/api/products`)
@@ -256,7 +265,7 @@ function App() {
   return (
     <div className="app-shell">
       <div className="phone-frame">
-        <Header account={account} onAccountClick={() => setTab('account')} sellerAlerts={sellerData?.alerts || []} />
+        <Header account={account} onAccountClick={() => setTab('account')} onSettingsClick={() => setShowSettings(true)} sellerAlerts={sellerData?.alerts || []} t={t} />
 
         <main className="screen-content">
           {tab === 'catalog' && (
@@ -268,14 +277,15 @@ function App() {
               products={filteredProducts}
               loading={productsLoading}
               onSelect={setSelectedProduct}
+              t={t}
             />
           )}
-          {tab === 'news' && <NewsScreen onSelect={setSelectedProduct} />}
-          {tab === 'account' && <AccountScreen account={account} orders={orders} setAccount={setAccount} onExplore={() => setTab('catalog')} onShowLogin={() => setShowLogin(true)} onShowSignup={() => setShowSignup(true)} onSelectOrder={setSelectedOrder} onSelectClient={setSelectedSellerClient} onShowRegisterSale={() => setShowRegisterSale(true)} sellerData={sellerData} />}
-          {tab === 'chat' && <ChatScreen account={account} />}
+          {tab === 'news' && <NewsScreen onSelect={setSelectedProduct} t={t} />}
+          {tab === 'account' && <AccountScreen account={account} orders={orders} setAccount={setAccount} onExplore={() => setTab('catalog')} onShowLogin={() => setShowLogin(true)} onShowSignup={() => setShowSignup(true)} onSelectOrder={setSelectedOrder} onSelectClient={setSelectedSellerClient} onShowRegisterSale={() => setShowRegisterSale(true)} sellerData={sellerData} t={t} />}
+          {tab === 'chat' && <ChatScreen account={account} t={t} />}
         </main>
 
-        <BottomNav tab={tab} setTab={setTab} />
+        <BottomNav tab={tab} setTab={setTab} t={t} />
 
         {selectedProduct && (
           <ProductSheet product={selectedProduct} onClose={() => setSelectedProduct(null)} onOrder={startOrder} />
@@ -286,11 +296,11 @@ function App() {
         )}
 
         {showLogin && (
-          <LoginModal onClose={() => setShowLogin(false)} onLoggedIn={handleLogin} onSwitchToSignup={() => { setShowLogin(false); setShowSignup(true) }} />
+          <LoginModal onClose={() => setShowLogin(false)} onLoggedIn={handleLogin} onSwitchToSignup={() => { setShowLogin(false); setShowSignup(true) }} t={t} />
         )}
 
         {showSignup && (
-          <StandaloneSignupModal onClose={() => setShowSignup(false)} onCreated={handleSignup} onSwitchToLogin={() => { setShowSignup(false); setShowLogin(true) }} />
+          <StandaloneSignupModal onClose={() => setShowSignup(false)} onCreated={handleSignup} onSwitchToLogin={() => { setShowSignup(false); setShowLogin(true) }} t={t} />
         )}
 
         {selectedOrder && (
@@ -317,14 +327,33 @@ function App() {
           />
         )}
 
+        {showSettings && account && (
+          <SettingsScreen
+            account={account}
+            language={language}
+            onLanguageChange={handleLanguageChange}
+            onClose={() => setShowSettings(false)}
+            onDeleteAccount={async () => {
+              try {
+                await fetch(`${API_URL}/api/delete-account?userId=${account.id}`, { method: 'DELETE' })
+              } catch {}
+              setAccount(null)
+              setShowSettings(false)
+              setToast('Conta excluída com sucesso.')
+            }}
+            t={t}
+          />
+        )}
+
         {toast && <div className="toast"><Check size={18} /> {toast}</div>}
       </div>
     </div>
   )
 }
 
-function Header({ account, onAccountClick, sellerAlerts }) {
+function Header({ account, onAccountClick, onSettingsClick, sellerAlerts, t }) {
   const [showAlerts, setShowAlerts] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
   const count = sellerAlerts.length
 
   return (
@@ -334,14 +363,20 @@ function Header({ account, onAccountClick, sellerAlerts }) {
       </div>
       <div className="header-actions">
         {count > 0 && (
-          <button className="icon-btn notif-btn" type="button" aria-label="Notificações" onClick={() => setShowAlerts(v => !v)}>
+          <button className="icon-btn notif-btn" type="button" aria-label={t('settings_title')} onClick={() => { setShowAlerts(v => !v); setShowMenu(false) }}>
             <Bell size={21} />
             <span className="notif-badge">{count}</span>
           </button>
         )}
-        <button className="icon-btn" type="button" aria-label="Ver conta" onClick={onAccountClick}>
-          {account ? <span className="avatar-mini">{account.email.charAt(0).toUpperCase()}</span> : <UserRound size={21} />}
-        </button>
+        {account ? (
+          <button className="icon-btn" type="button" aria-label="Menu da conta" onClick={() => { setShowMenu(v => !v); setShowAlerts(false) }}>
+            <span className="avatar-mini">{account.email.charAt(0).toUpperCase()}</span>
+          </button>
+        ) : (
+          <button className="icon-btn" type="button" aria-label="Ver conta" onClick={onAccountClick}>
+            <UserRound size={21} />
+          </button>
+        )}
       </div>
       {showAlerts && (
         <div className="notif-panel">
@@ -353,18 +388,28 @@ function Header({ account, onAccountClick, sellerAlerts }) {
           ))}
         </div>
       )}
+      {showMenu && (
+        <div className="account-menu-panel">
+          <button type="button" onClick={() => { setShowMenu(false); onAccountClick() }}>
+            <UserRound size={16} /> {t('menu_account')}
+          </button>
+          <button type="button" onClick={() => { setShowMenu(false); onSettingsClick() }}>
+            <Home size={16} /> {t('menu_settings')}
+          </button>
+        </div>
+      )}
     </header>
   )
 }
 
-function CatalogScreen({ query, setQuery, category, setCategory, products, loading, onSelect }) {
+function CatalogScreen({ query, setQuery, category, setCategory, products, loading, onSelect, t }) {
   return (
     <section className="catalog-screen">
       <div className="hero-card-mobile">
         <div>
-          <span className="small-badge navy-badge">Distribuidora de alimentos</span>
-          <h1>Alimentos que chegam com qualidade.</h1>
-          <p>A Saborsan entrega praticidade, variedade e confiança para o seu estabelecimento.</p>
+          <span className="small-badge navy-badge">{t('catalog_badge')}</span>
+          <h1>{t('catalog_hero_title')}</h1>
+          <p>{t('catalog_hero_sub')}</p>
         </div>
         <div className="hero-product">
           <img src={BASE + 'images/mini-pizza-1.jpg'} alt="Mini pizza" />
@@ -373,7 +418,7 @@ function CatalogScreen({ query, setQuery, category, setCategory, products, loadi
 
       <div className="search-box">
         <Search size={18} />
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar alimentos..." />
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('catalog_search')} />
       </div>
 
       <div className="category-row">
@@ -386,10 +431,10 @@ function CatalogScreen({ query, setQuery, category, setCategory, products, loadi
 
       <div className="section-title-row">
         <div>
-          <span>Catálogo</span>
-          <h2>Produtos em destaque</h2>
+          <span>{t('catalog_section')}</span>
+          <h2>{t('catalog_featured')}</h2>
         </div>
-        <small>{loading ? '…' : `${products.length} itens`}</small>
+        <small>{loading ? '…' : `${products.length} ${t('catalog_items')}`}</small>
       </div>
 
       <div className="product-list">
@@ -519,7 +564,7 @@ function CreateAccountModal({ product, onClose, onCreated }) {
   )
 }
 
-function LoginModal({ onClose, onLoggedIn, onSwitchToSignup }) {
+function LoginModal({ onClose, onLoggedIn, onSwitchToSignup, t }) {
   const [form, setForm] = useState({ email: '', password: '' })
   const update = (field, value) => setForm((current) => ({ ...current, [field]: value }))
 
@@ -533,25 +578,25 @@ function LoginModal({ onClose, onLoggedIn, onSwitchToSignup }) {
     <div className="modal-backdrop">
       <form className="account-modal" onSubmit={submit}>
         <button className="sheet-close" type="button" onClick={onClose} aria-label="Fechar"><X size={20} /></button>
-        <span className="small-badge">Bem-vindo de volta</span>
-        <h2>Entre na sua conta</h2>
-        <p className="modal-copy">Acesse com seu e-mail e senha para continuar.</p>
+        <span className="small-badge">{t('login_welcome')}</span>
+        <h2>{t('login_title')}</h2>
+        <p className="modal-copy">{t('login_sub')}</p>
         <label>
-          E-mail
+          {t('login_email')}
           <input type="email" value={form.email} onChange={(event) => update('email', event.target.value)} placeholder="cliente@empresa.com" required />
         </label>
         <label>
-          Senha
-          <input type="password" value={form.password} onChange={(event) => update('password', event.target.value)} placeholder="Sua senha" required />
+          {t('login_password')}
+          <input type="password" value={form.password} onChange={(event) => update('password', event.target.value)} placeholder={t('login_password')} required />
         </label>
-        <button className="primary-full" type="submit">Entrar</button>
-        <p className="modal-switch">Não tem conta? <button type="button" className="link-btn" onClick={onSwitchToSignup}>Criar uma conta</button></p>
+        <button className="primary-full" type="submit">{t('login_btn')}</button>
+        <p className="modal-switch">{t('login_no_account')} <button type="button" className="link-btn" onClick={onSwitchToSignup}>{t('login_create')}</button></p>
       </form>
     </div>
   )
 }
 
-function StandaloneSignupModal({ onClose, onCreated, onSwitchToLogin }) {
+function StandaloneSignupModal({ onClose, onCreated, onSwitchToLogin, t }) {
   const [form, setForm] = useState({ email: '', password: '', whatsapp: '', isCompany: false, cnpj: '' })
   const [success, setSuccess] = useState(false)
   const update = (field, value) => setForm((current) => ({ ...current, [field]: value }))
@@ -575,9 +620,9 @@ function StandaloneSignupModal({ onClose, onCreated, onSwitchToLogin }) {
           </div>
         ) : (
           <>
-            <span className="small-badge">Cadastro rápido</span>
-            <h2>Crie sua conta</h2>
-            <p className="modal-copy">Preencha as informações abaixo para começar a usar a Saborsan.</p>
+            <span className="small-badge">{t('signup_badge')}</span>
+            <h2>{t('signup_title')}</h2>
+            <p className="modal-copy">{t('signup_sub')}</p>
             <label>
               E-mail
               <input type="email" value={form.email} onChange={(event) => update('email', event.target.value)} placeholder="cliente@empresa.com" required />
@@ -671,6 +716,110 @@ function CompleteProfileModal({ account, onClose, onSaved }) {
         </button>
       </form>
     </div>
+  )
+}
+
+function SettingsScreen({ account, language, onLanguageChange, onClose, onDeleteAccount, t }) {
+  const [settings, setSettings] = useState({ language, notificationSound: true, deliveryNotifications: true })
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/settings?userId=${account.id}`)
+      .then(r => r.json())
+      .then(d => { if (d.settings) setSettings({ ...d.settings, notificationSound: !!d.settings.notificationSound, deliveryNotifications: !!d.settings.deliveryNotifications }) })
+      .catch(() => {})
+  }, [account.id])
+
+  async function updateSetting(field, value) {
+    const updated = { ...settings, [field]: value }
+    setSettings(updated)
+    if (field === 'language') onLanguageChange(value)
+    fetch(`${API_URL}/api/settings`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: account.id, [field]: typeof value === 'boolean' ? (value ? 1 : 0) : value }),
+    }).catch(() => {})
+  }
+
+  const langs = [{ value: 'pt', label: 'Português' }, { value: 'en', label: 'English' }, { value: 'es', label: 'Español' }]
+
+  return (
+    <>
+      <div className="sheet-backdrop" onClick={onClose}>
+        <div className="product-sheet settings-sheet" onClick={e => e.stopPropagation()}>
+          <button className="sheet-close" type="button" onClick={onClose} aria-label="Fechar"><X size={20} /></button>
+          <div className="sheet-scroll">
+            <div className="sheet-body">
+              <h2 style={{ marginBottom: '20px' }}>{t('settings_title')}</h2>
+
+              <div className="settings-section">
+                <span className="settings-label">{t('settings_language')}</span>
+                <div className="payment-grid">
+                  {langs.map(l => (
+                    <button key={l.value} type="button"
+                      className={`payment-btn ${(settings.language || language) === l.value ? 'selected' : ''}`}
+                      onClick={() => updateSetting('language', l.value)}>
+                      {l.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="settings-row">
+                <div>
+                  <span className="settings-label">{t('settings_sound')}</span>
+                  <small>{t('settings_sound_sub')}</small>
+                </div>
+                <button type="button" className={`toggle-btn ${settings.notificationSound ? 'on' : ''}`}
+                  onClick={() => updateSetting('notificationSound', !settings.notificationSound)}>
+                  <span />
+                </button>
+              </div>
+
+              <div className="settings-row">
+                <div>
+                  <span className="settings-label">{t('settings_delivery')}</span>
+                  <small>{t('settings_delivery_sub')}</small>
+                </div>
+                <button type="button" className={`toggle-btn ${settings.deliveryNotifications ? 'on' : ''}`}
+                  onClick={() => updateSetting('deliveryNotifications', !settings.deliveryNotifications)}>
+                  <span />
+                </button>
+              </div>
+
+              <div className="settings-section">
+                <button type="button" className="settings-link-btn" onClick={() => window.open('https://saborsan.com.br/privacidade', '_blank')}>
+                  {t('settings_privacy')}
+                </button>
+                <button type="button" className="settings-link-btn" onClick={() => window.open('mailto:contato@saborsan.com.br?subject=Feedback', '_blank')}>
+                  {t('settings_feedback')}
+                </button>
+                <button type="button" className="settings-link-btn" style={{ color: '#e53e3e' }} onClick={() => setShowDeleteModal(true)}>
+                  {t('settings_delete')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {showDeleteModal && (
+        <div className="modal-backdrop" style={{ zIndex: 60 }}>
+          <div className="account-modal" style={{ maxWidth: '360px', textAlign: 'center' }}>
+            <h2 style={{ color: '#e53e3e', marginBottom: '12px' }}>{t('delete_title')}</h2>
+            <p className="modal-copy" style={{ marginBottom: '20px' }}>{t('delete_msg')}</p>
+            <button className="settings-delete-btn" disabled={deleting}
+              onClick={async () => { setDeleting(true); await onDeleteAccount() }}>
+              {deleting ? t('delete_deleting') : t('delete_confirm')}
+            </button>
+            <button className="ghost-full" type="button" onClick={() => setShowDeleteModal(false)} style={{ marginTop: '8px' }}>
+              {t('delete_cancel')}
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -776,7 +925,7 @@ function EditProfileModal({ account, onClose, onSaved }) {
   )
 }
 
-function NewsScreen({ onSelect }) {
+function NewsScreen({ onSelect, t }) {
   return (
     <section className="news-screen">
       <div className="page-heading">
@@ -810,28 +959,28 @@ function NewsScreen({ onSelect }) {
   )
 }
 
-function AccountScreen({ account, orders, setAccount, onExplore, onShowLogin, onShowSignup, onSelectOrder, onSelectClient, onShowRegisterSale, sellerData }) {
+function AccountScreen({ account, orders, setAccount, onExplore, onShowLogin, onShowSignup, onSelectOrder, onSelectClient, onShowRegisterSale, sellerData, t }) {
   const [showEditProfile, setShowEditProfile] = useState(false)
 
   if (account?.role === 'seller') {
-    return <SellerDashboard account={account} setAccount={setAccount} onSelectClient={onSelectClient} onShowRegisterSale={onShowRegisterSale} sellerData={sellerData} />
+    return <SellerDashboard account={account} setAccount={setAccount} onSelectClient={onSelectClient} onShowRegisterSale={onShowRegisterSale} sellerData={sellerData} t={t} />
   }
 
   return (
     <section className="account-screen">
       <div className="page-heading">
-        <span className="small-badge"><UserRound size={15} /> Minha conta</span>
-        <h1>Pedidos, solicitações e entregas.</h1>
-        <p>Acompanhe tudo o que foi comprado, solicitado e o status da entrega dos alimentos.</p>
+        <span className="small-badge"><UserRound size={15} /> {t('account_badge')}</span>
+        <h1>{t('account_title')}</h1>
+        <p>{t('account_sub')}</p>
       </div>
 
       {!account ? (
         <div className="empty-account">
           <UserRound size={36} />
-          <h2>Entre ou crie uma conta.</h2>
-          <p>Acesse sua conta para acompanhar pedidos, solicitações e entregas.</p>
-          <button className="primary-full" type="button" onClick={onShowLogin}>Entrar</button>
-          <button className="ghost-full" type="button" onClick={onShowSignup}>Criar uma conta</button>
+          <h2>{t('account_empty_title')}</h2>
+          <p>{t('account_empty_sub')}</p>
+          <button className="primary-full" type="button" onClick={onShowLogin}>{t('account_login')}</button>
+          <button className="ghost-full" type="button" onClick={onShowSignup}>{t('account_signup')}</button>
         </div>
       ) : (
         <>
@@ -848,15 +997,15 @@ function AccountScreen({ account, orders, setAccount, onExplore, onShowLogin, on
           </div>
 
           <button className="ghost-full" type="button" onClick={() => setShowEditProfile(true)} style={{ marginBottom: '8px' }}>
-            Editar informações de contato
+            {t('account_edit')}
           </button>
 
           <div className="section-title-row compact">
             <div>
-              <span>Histórico</span>
-              <h2>Compras e solicitações</h2>
+              <span>{t('account_history')}</span>
+              <h2>{t('account_orders')}</h2>
             </div>
-            <small>{orders.length} registros</small>
+            <small>{orders.length} {t('account_records')}</small>
           </div>
 
           <div className="orders-list">
@@ -865,7 +1014,7 @@ function AccountScreen({ account, orders, setAccount, onExplore, onShowLogin, on
             ))}
           </div>
 
-          <button className="ghost-full" type="button" onClick={() => setAccount(null)}>Sair da conta</button>
+          <button className="ghost-full" type="button" onClick={() => setAccount(null)}>{t('account_logout')}</button>
 
           {showEditProfile && (
             <EditProfileModal
@@ -961,13 +1110,13 @@ function OrderCard({ order, onSelect }) {
   )
 }
 
-function ChatScreen({ account }) {
+function ChatScreen({ account, t }) {
   const deviceId = useMemo(() => getDeviceId(), [])
   const welcomeMessage = useMemo(() => ({
     id: 'welcome',
     from: 'seller',
     type: 'text',
-    text: 'Olá! Seja bem-vindo à Saborsan 👋 Como posso te ajudar hoje?',
+    text: t('chat_online') === 'online agora' ? 'Olá! Seja bem-vindo à Saborsan 👋 Como posso te ajudar hoje?' : t('chat_team') + ' - Hello! Welcome to Saborsan 👋 How can I help you?',
     time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   }), [])
 
@@ -1227,8 +1376,8 @@ function ChatScreen({ account }) {
         <div className="chat-header-info">
           <div className="chat-avatar-small">S</div>
           <div>
-            <h3>Equipe Saborsan</h3>
-            <span>online agora</span>
+            <h3>{t('chat_team')}</h3>
+            <span>{t('chat_online')}</span>
           </div>
         </div>
         <button className="chat-call-btn" type="button" onClick={startCallSession} aria-label="Ligar para o vendedor">
@@ -1237,7 +1386,7 @@ function ChatScreen({ account }) {
       </div>
 
       <div className="chat-messages">
-        <div className="chat-date-label">Hoje</div>
+        <div className="chat-date-label">{t('chat_today')}</div>
         {messages.map((msg) => (
           <div key={msg.id} className={`chat-bubble-wrap ${msg.from === 'user' ? 'outgoing' : 'incoming'}`}>
             {msg.type === 'text' ? (
@@ -1299,7 +1448,7 @@ function ChatScreen({ account }) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendText()}
-              placeholder="Mensagem"
+              placeholder={t('chat_placeholder')}
               disabled={isLoading}
             />
             {input.trim() ? (
@@ -1755,12 +1904,12 @@ function RegisterSaleSheet({ onClose, onComplete, products, citiesData, account 
   )
 }
 
-function BottomNav({ tab, setTab }) {
+function BottomNav({ tab, setTab, t }) {
   const items = [
-    { id: 'catalog', label: 'Catálogo', icon: LayoutGrid },
-    { id: 'news', label: 'Novidades', icon: Sparkles },
-    { id: 'chat', label: 'Vendedor', icon: MessageCircle },
-    { id: 'account', label: 'Conta', icon: UserRound }
+    { id: 'catalog', label: t('nav_catalog'), icon: LayoutGrid },
+    { id: 'news', label: t('nav_news'), icon: Sparkles },
+    { id: 'chat', label: t('nav_seller'), icon: MessageCircle },
+    { id: 'account', label: t('nav_account'), icon: UserRound }
   ]
   return (
     <nav className="bottom-nav" aria-label="Navegação principal">
