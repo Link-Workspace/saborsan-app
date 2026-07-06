@@ -20,6 +20,7 @@ import {
   Plus,
   Search,
   Send,
+  Settings,
   ShoppingBag,
   Sparkles,
   UserRound,
@@ -64,7 +65,7 @@ function App() {
   const [citiesData, setCitiesData] = useState([])
   const [account, setAccount] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem('saborsan-account-demo')) || null
+      return JSON.parse(localStorage.getItem('saborsan-account')) || null
     } catch {
       return null
     }
@@ -97,7 +98,7 @@ function App() {
   }, [])
 
   useEffect(() => {
-    localStorage.setItem('saborsan-account-demo', JSON.stringify(account))
+    localStorage.setItem('saborsan-account', JSON.stringify(account))
     if (account?.role === 'seller' && account?.id) {
       fetch(`${API_URL}/api/seller-data?userId=${account.id}`)
         .then(r => r.json())
@@ -327,7 +328,7 @@ function App() {
           />
         )}
 
-        {showSettings && account && (
+        {showSettings && (
           <SettingsScreen
             account={account}
             language={language}
@@ -373,7 +374,7 @@ function Header({ account, onAccountClick, onSettingsClick, sellerAlerts, t }) {
             <span className="avatar-mini">{account.email.charAt(0).toUpperCase()}</span>
           </button>
         ) : (
-          <button className="icon-btn" type="button" aria-label="Ver conta" onClick={onAccountClick}>
+          <button className="icon-btn" type="button" aria-label="Menu" onClick={() => { setShowMenu(v => !v); setShowAlerts(false) }}>
             <UserRound size={21} />
           </button>
         )}
@@ -394,7 +395,7 @@ function Header({ account, onAccountClick, onSettingsClick, sellerAlerts, t }) {
             <UserRound size={16} /> {t('menu_account')}
           </button>
           <button type="button" onClick={() => { setShowMenu(false); onSettingsClick() }}>
-            <Home size={16} /> {t('menu_settings')}
+            <Settings size={16} /> {t('menu_settings')}
           </button>
         </div>
       )}
@@ -725,16 +726,18 @@ function SettingsScreen({ account, language, onLanguageChange, onClose, onDelete
   const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
+    if (!account?.id) return
     fetch(`${API_URL}/api/settings?userId=${account.id}`)
       .then(r => r.json())
       .then(d => { if (d.settings) setSettings({ ...d.settings, notificationSound: !!d.settings.notificationSound, deliveryNotifications: !!d.settings.deliveryNotifications }) })
       .catch(() => {})
-  }, [account.id])
+  }, [account?.id])
 
   async function updateSetting(field, value) {
     const updated = { ...settings, [field]: value }
     setSettings(updated)
     if (field === 'language') onLanguageChange(value)
+    if (!account?.id) return
     fetch(`${API_URL}/api/settings`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -795,9 +798,11 @@ function SettingsScreen({ account, language, onLanguageChange, onClose, onDelete
                 <button type="button" className="settings-link-btn" onClick={() => window.open('mailto:contato@saborsan.com.br?subject=Feedback', '_blank')}>
                   {t('settings_feedback')}
                 </button>
-                <button type="button" className="settings-link-btn" style={{ color: '#e53e3e' }} onClick={() => setShowDeleteModal(true)}>
-                  {t('settings_delete')}
-                </button>
+                {account && (
+                  <button type="button" className="settings-link-btn" style={{ color: '#e53e3e' }} onClick={() => setShowDeleteModal(true)}>
+                    {t('settings_delete')}
+                  </button>
+                )}
               </div>
             </div>
           </div>
