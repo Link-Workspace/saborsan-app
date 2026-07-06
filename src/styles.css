@@ -540,6 +540,19 @@ button { -webkit-tap-highlight-color: transparent; }
   color: var(--navy);
   font-weight: 700;
 }
+.feedback-field {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  background: #fff;
+  outline: none;
+  color: var(--navy);
+  font-weight: 700;
+  font-family: inherit;
+  font-size: inherit;
+  resize: none;
+}
 .toggle-company {
   display: flex !important;
   align-items: center;

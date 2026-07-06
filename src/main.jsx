@@ -724,6 +724,11 @@ function SettingsScreen({ account, language, onLanguageChange, onClose, onDelete
   const [settings, setSettings] = useState({ language, notificationSound: true, deliveryNotifications: true })
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [view, setView] = useState('main')
+  const [feedback, setFeedback] = useState({ email: account?.email || '', content: '' })
+  const [feedbackSending, setFeedbackSending] = useState(false)
+  const [feedbackSent, setFeedbackSent] = useState(false)
+  const feedbackReady = feedback.email.trim() && feedback.content.trim()
 
   useEffect(() => {
     if (!account?.id) return
@@ -754,8 +759,65 @@ function SettingsScreen({ account, language, onLanguageChange, onClose, onDelete
           <button className="sheet-close" type="button" onClick={onClose} aria-label="Fechar"><X size={20} /></button>
           <div className="sheet-scroll">
             <div className="sheet-body">
-              <h2 style={{ marginBottom: '20px' }}>{t('settings_title')}</h2>
 
+              {view === 'feedback' ? (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                    <button type="button" className="sale-back-btn" onClick={() => { setView('main'); setFeedbackSent(false) }}>
+                      <ChevronLeft size={16} /> {t('settings_title')}
+                    </button>
+                  </div>
+                  <h2 style={{ marginBottom: '16px' }}>{t('settings_feedback')}</h2>
+                  {feedbackSent ? (
+                    <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                      <Check size={40} style={{ color: 'var(--orange)', margin: '0 auto 12px', display: 'block' }} />
+                      <p style={{ fontWeight: 700, color: 'var(--navy)' }}>Feedback enviado! Obrigado.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px', fontWeight: 700, fontSize: '.9rem', color: 'var(--navy)' }}>
+                        E-mail
+                        <input
+                          type="email"
+                          value={feedback.email}
+                          onChange={e => setFeedback(f => ({ ...f, email: e.target.value }))}
+                          placeholder="seu@email.com"
+                          className="feedback-field"
+                        />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px', fontWeight: 700, fontSize: '.9rem', color: 'var(--navy)' }}>
+                        Feedback
+                        <textarea
+                          value={feedback.content}
+                          onChange={e => setFeedback(f => ({ ...f, content: e.target.value }))}
+                          placeholder="Conte sua experiência ou sugestão..."
+                          rows={5}
+                          className="feedback-field"
+                        />
+                      </label>
+                      <button
+                        className="primary-full"
+                        type="button"
+                        disabled={!feedbackReady || feedbackSending}
+                        onClick={async () => {
+                          setFeedbackSending(true)
+                          try {
+                            await fetch(`${API_URL}/api/feedback`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ email: feedback.email, content: feedback.content, userId: account?.id || null }),
+                            })
+                            setFeedbackSent(true)
+                          } catch {}
+                          setFeedbackSending(false)
+                        }}>
+                        {feedbackSending ? 'Enviando…' : 'Enviar feedback'}
+                      </button>
+                    </>
+                  )}
+                </>
+              ) : (
+              <>
               <div className="settings-section">
                 <span className="settings-label">{t('settings_language')}</span>
                 <div className="payment-grid">
@@ -795,7 +857,7 @@ function SettingsScreen({ account, language, onLanguageChange, onClose, onDelete
                 <button type="button" className="settings-link-btn" onClick={() => window.open('https://saborsan.com.br/privacidade', '_blank')}>
                   {t('settings_privacy')}
                 </button>
-                <button type="button" className="settings-link-btn" onClick={() => window.open('mailto:contato@saborsan.com.br?subject=Feedback', '_blank')}>
+                <button type="button" className="settings-link-btn" onClick={() => setView('feedback')}>
                   {t('settings_feedback')}
                 </button>
                 {account && (
@@ -804,6 +866,8 @@ function SettingsScreen({ account, language, onLanguageChange, onClose, onDelete
                   </button>
                 )}
               </div>
+              </>
+              )}
             </div>
           </div>
         </div>
