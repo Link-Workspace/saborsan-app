@@ -202,7 +202,7 @@ function App() {
       if (!res.ok) throw new Error(data.error)
       setAccount(data.user)
       setShowLogin(false)
-      if (!data.user.name || !data.user.establishmentName || !data.user.address) {
+      if (data.user.role !== 'seller' && (!data.user.name || !data.user.establishmentName || !data.user.address)) {
         setShowCompleteProfile(true)
       }
       setToast('Bem-vindo de volta!')
@@ -256,7 +256,7 @@ function App() {
   return (
     <div className="app-shell">
       <div className="phone-frame">
-        <Header account={account} onAccountClick={() => setTab('account')} />
+        <Header account={account} onAccountClick={() => setTab('account')} sellerAlerts={sellerData?.alerts || []} />
 
         <main className="screen-content">
           {tab === 'catalog' && (
@@ -305,7 +305,7 @@ function App() {
           <RegisterSaleSheet onClose={() => setShowRegisterSale(false)} onComplete={handleSaleComplete} products={dbProducts} citiesData={citiesData} account={account} />
         )}
 
-        {showCompleteProfile && account && (
+        {showCompleteProfile && account && account.role !== 'seller' && (
           <CompleteProfileModal
             account={account}
             onClose={() => { setShowCompleteProfile(false); setPendingProduct(null) }}
@@ -323,15 +323,36 @@ function App() {
   )
 }
 
-function Header({ account, onAccountClick }) {
+function Header({ account, onAccountClick, sellerAlerts }) {
+  const [showAlerts, setShowAlerts] = useState(false)
+  const count = sellerAlerts.length
+
   return (
     <header className="app-header">
       <div className="logo-pill">
         <img src={BASE + 'images/logo-saborsan.png'} alt="Saborsan" />
       </div>
-      <button className="icon-btn" type="button" aria-label="Ver conta" onClick={onAccountClick}>
-        {account ? <span className="avatar-mini">{account.email.charAt(0).toUpperCase()}</span> : <UserRound size={21} />}
-      </button>
+      <div className="header-actions">
+        {count > 0 && (
+          <button className="icon-btn notif-btn" type="button" aria-label="Notificações" onClick={() => setShowAlerts(v => !v)}>
+            <Bell size={21} />
+            <span className="notif-badge">{count}</span>
+          </button>
+        )}
+        <button className="icon-btn" type="button" aria-label="Ver conta" onClick={onAccountClick}>
+          {account ? <span className="avatar-mini">{account.email.charAt(0).toUpperCase()}</span> : <UserRound size={21} />}
+        </button>
+      </div>
+      {showAlerts && (
+        <div className="notif-panel">
+          {sellerAlerts.map((alert) => (
+            <div key={alert.id} className={`seller-alert-item ${alert.type}`}>
+              <Bell size={13} />
+              <p>{alert.text}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </header>
   )
 }
@@ -1356,15 +1377,6 @@ function SellerDashboard({ account, setAccount, onSelectClient, onShowRegisterSa
         <Plus size={20} />
         <span>Registrar nova venda</span>
       </button>
-
-      <div className="seller-alerts-list">
-        {data.alerts.map((alert) => (
-          <div key={alert.id} className={`seller-alert-item ${alert.type}`}>
-            <Bell size={13} />
-            <p>{alert.text}</p>
-          </div>
-        ))}
-      </div>
 
       <div className="section-title-row compact">
         <div>
