@@ -65,6 +65,8 @@ function App() {
   const [toast, setToast] = useState('')
   const [showLogin, setShowLogin] = useState(false)
   const [showSignup, setShowSignup] = useState(false)
+  const [showCompleteProfile, setShowCompleteProfile] = useState(false)
+  const [pendingProduct, setPendingProduct] = useState(null)
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [selectedSellerClient, setSelectedSellerClient] = useState(null)
   const [showRegisterSale, setShowRegisterSale] = useState(false)
@@ -129,6 +131,12 @@ function App() {
       setSelectedProduct(null)
       return
     }
+    if (!account.name || !account.establishmentName || !account.address) {
+      setPendingProduct(product)
+      setSelectedProduct(null)
+      setShowCompleteProfile(true)
+      return
+    }
     confirmOrder(product)
   }
 
@@ -175,6 +183,7 @@ function App() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setAccount(data.user)
+      setShowCompleteProfile(true)
       setToast('Conta criada com sucesso. O pedido foi continuado automaticamente.')
       if (authProduct) confirmOrder(authProduct)
     } catch (err) {
@@ -191,8 +200,11 @@ function App() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      setAccount({ ...data.user, role: credentials.isSeller ? 'seller' : data.user.role })
+      setAccount(data.user)
       setShowLogin(false)
+      if (!data.user.name || !data.user.establishmentName || !data.user.address) {
+        setShowCompleteProfile(true)
+      }
       setToast('Bem-vindo de volta!')
     } catch (err) {
       setToast(err.message || 'Erro ao entrar. Verifique suas credenciais.')
@@ -216,6 +228,7 @@ function App() {
       if (!res.ok) throw new Error(data.error)
       setAccount(data.user)
       setShowSignup(false)
+      setShowCompleteProfile(true)
       setToast('Conta criada com sucesso!')
     } catch (err) {
       setToast(err.message || 'Erro ao criar conta. Tente novamente.')
@@ -290,6 +303,18 @@ function App() {
 
         {showRegisterSale && (
           <RegisterSaleSheet onClose={() => setShowRegisterSale(false)} onComplete={handleSaleComplete} products={dbProducts} citiesData={citiesData} account={account} />
+        )}
+
+        {showCompleteProfile && account && (
+          <CompleteProfileModal
+            account={account}
+            onClose={() => { setShowCompleteProfile(false); setPendingProduct(null) }}
+            onSaved={(updated) => {
+              setAccount(updated)
+              setShowCompleteProfile(false)
+              if (pendingProduct) { confirmOrder(pendingProduct); setPendingProduct(null) }
+            }}
+          />
         )}
 
         {toast && <div className="toast"><Check size={18} /> {toast}</div>}
@@ -474,13 +499,13 @@ function CreateAccountModal({ product, onClose, onCreated }) {
 }
 
 function LoginModal({ onClose, onLoggedIn, onSwitchToSignup }) {
-  const [form, setForm] = useState({ email: '', password: '', isSeller: false })
+  const [form, setForm] = useState({ email: '', password: '' })
   const update = (field, value) => setForm((current) => ({ ...current, [field]: value }))
 
   function submit(event) {
     event.preventDefault()
     if (!form.email || !form.password) return
-    onLoggedIn({ ...form, role: form.isSeller ? 'seller' : 'client' })
+    onLoggedIn(form)
   }
 
   return (
@@ -499,10 +524,6 @@ function LoginModal({ onClose, onLoggedIn, onSwitchToSignup }) {
           <input type="password" value={form.password} onChange={(event) => update('password', event.target.value)} placeholder="Sua senha" required />
         </label>
         <button className="primary-full" type="submit">Entrar</button>
-        <label className="toggle-company seller-toggle">
-          <input type="checkbox" checked={form.isSeller} onChange={(event) => update('isSeller', event.target.checked)} />
-          <span><PackageCheck size={16} /> Sou vendedor externo</span>
-        </label>
         <p className="modal-switch">Não tem conta? <button type="button" className="link-btn" onClick={onSwitchToSignup}>Criar uma conta</button></p>
       </form>
     </div>
@@ -567,11 +588,75 @@ function StandaloneSignupModal({ onClose, onCreated, onSwitchToLogin }) {
   )
 }
 
+function CompleteProfileModal({ account, onClose, onSaved }) {
+  const [form, setForm] = useState({ name: '', establishmentName: '', address: '', city: '' })
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const update = (field, value) => setForm((f) => ({ ...f, [field]: value }))
+
+  async function submit(e) {
+    e.preventDefault()
+    if (!form.name.trim() || !form.establishmentName.trim() || !form.address.trim() || !form.city.trim()) {
+      setError('Preencha todas as informações para salvar.')
+      return
+    }
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch(`${API_URL}/api/update-profile`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: account.id, ...form }),
+      })
+      const data = await res.json()
+      if (res.ok) onSaved({ ...account, ...data.user })
+      else { setError(data.error || 'Erro ao salvar. Tente novamente.'); setLoading(false) }
+    } catch {
+      setError('Erro ao salvar. Tente novamente.')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="modal-backdrop">
+      <form className="account-modal" onSubmit={submit}>
+        <button className="sheet-close" type="button" onClick={onClose} aria-label="Fechar"><X size={20} /></button>
+        <span className="small-badge">Quase lá!</span>
+        <h2>Informações do estabelecimento</h2>
+        <p className="modal-copy">Preencha para facilitar seus pedidos e entregas.</p>
+
+        <label>
+          Seu nome
+          <input value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="Seu nome completo" />
+        </label>
+        <label>
+          Nome do estabelecimento
+          <input value={form.establishmentName} onChange={(e) => update('establishmentName', e.target.value)} placeholder="Ex: Padaria Bom Pão" />
+        </label>
+        <label>
+          Endereço para entrega
+          <input value={form.address} onChange={(e) => update('address', e.target.value)} placeholder="Rua, número, bairro" />
+        </label>
+        <label>
+          Cidade
+          <input value={form.city} onChange={(e) => update('city', e.target.value)} placeholder="Ex: Lages" />
+        </label>
+
+        {error && <p style={{ color: '#e53e3e', fontSize: '13px', margin: '4px 0' }}>{error}</p>}
+        <button className="primary-full" type="submit" disabled={loading}>
+          {loading ? 'Salvando…' : 'Salvar e continuar'}
+        </button>
+      </form>
+    </div>
+  )
+}
+
 function EditProfileModal({ account, onClose, onSaved }) {
   const [form, setForm] = useState({
     name: account.name || '',
     whatsapp: account.whatsapp || '',
     address: account.address || '',
+    city: account.city || '',
     cnpj: account.cnpj || '',
     establishmentName: account.establishmentName || '',
     invoicePreference: account.invoicePreference || 'whatsapp',
@@ -602,52 +687,60 @@ function EditProfileModal({ account, onClose, onSaved }) {
 
   return (
     <div className="modal-backdrop">
-      <form className="account-modal" onSubmit={submit}>
+      <form className="account-modal edit-profile-modal" onSubmit={submit}>
         <button className="sheet-close" type="button" onClick={onClose} aria-label="Fechar"><X size={20} /></button>
-        <span className="small-badge">Minha conta</span>
-        <h2>Editar informações de contato</h2>
-        <p className="modal-copy">Atualize seus dados de contato e entrega.</p>
+        <div className="edit-profile-scroll">
+          <span className="small-badge">Minha conta</span>
+          <h2>Editar informações de contato</h2>
+          <p className="modal-copy">Atualize seus dados de contato e entrega.</p>
 
-        <label>
-          Nome
-          <input value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="Seu nome completo" />
-        </label>
-        <label>
-          Nome do estabelecimento
-          <input value={form.establishmentName} onChange={(e) => update('establishmentName', e.target.value)} placeholder="Ex: Padaria Bom Pão" />
-        </label>
-        <label>
-          E-mail
-          <input type="email" value={account.email} disabled style={{ opacity: 0.5 }} />
-        </label>
-        <label>
-          WhatsApp
-          <input value={form.whatsapp} onChange={(e) => update('whatsapp', e.target.value)} placeholder="(49) 99999-0000" />
-        </label>
-        <label>
-          Endereço
-          <input value={form.address} onChange={(e) => update('address', e.target.value)} placeholder="Rua, número, bairro, cidade" />
-        </label>
-        {account.isCompany && (
           <label>
-            CNPJ
-            <input value={form.cnpj} onChange={(e) => update('cnpj', e.target.value)} placeholder="00.000.000/0000-00" />
+            Nome
+            <input value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="Seu nome completo" />
           </label>
-        )}
-        <label>Receber nota fiscal eletrônica por</label>
-        <div className="payment-grid" style={{ marginTop: '4px', marginBottom: '8px' }}>
-          {[{ value: 'whatsapp', label: 'WhatsApp' }, { value: 'email', label: 'E-mail' }, { value: 'ambos', label: 'Ambos' }].map(opt => (
-            <button key={opt.value} type="button"
-              className={`payment-btn ${form.invoicePreference === opt.value ? 'selected' : ''}`}
-              onClick={() => update('invoicePreference', opt.value)}>
-              {opt.label}
-            </button>
-          ))}
+          <label>
+            Nome do estabelecimento
+            <input value={form.establishmentName} onChange={(e) => update('establishmentName', e.target.value)} placeholder="Ex: Padaria Bom Pão" />
+          </label>
+          <label>
+            E-mail
+            <input type="email" value={account.email} disabled style={{ opacity: 0.5 }} />
+          </label>
+          <label>
+            WhatsApp
+            <input value={form.whatsapp} onChange={(e) => update('whatsapp', e.target.value)} placeholder="(49) 99999-0000" />
+          </label>
+          <label>
+            Endereço
+            <input value={form.address} onChange={(e) => update('address', e.target.value)} placeholder="Rua, número, bairro" />
+          </label>
+          <label>
+            Cidade
+            <input value={form.city} onChange={(e) => update('city', e.target.value)} placeholder="Ex: Lages" />
+          </label>
+          {account.isCompany && (
+            <label>
+              CNPJ
+              <input value={form.cnpj} onChange={(e) => update('cnpj', e.target.value)} placeholder="00.000.000/0000-00" />
+            </label>
+          )}
+          <label>Receber nota fiscal eletrônica por</label>
+          <div className="payment-grid" style={{ marginTop: '4px', marginBottom: '8px' }}>
+            {[{ value: 'whatsapp', label: 'WhatsApp' }, { value: 'email', label: 'E-mail' }, { value: 'ambos', label: 'Ambos' }].map(opt => (
+              <button key={opt.value} type="button"
+                className={`payment-btn ${form.invoicePreference === opt.value ? 'selected' : ''}`}
+                onClick={() => update('invoicePreference', opt.value)}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {error && <p style={{ color: '#e53e3e', fontSize: '13px', margin: '4px 0' }}>{error}</p>}
         </div>
-        {error && <p style={{ color: '#e53e3e', fontSize: '13px', margin: '4px 0' }}>{error}</p>}
-        <button className="primary-full" type="submit" disabled={loading}>
-          {loading ? 'Salvando…' : 'Salvar informações'}
-        </button>
+        <div className="edit-profile-footer">
+          <button className="primary-full" type="submit" disabled={loading}>
+            {loading ? 'Salvando…' : 'Salvar informações'}
+          </button>
+        </div>
       </form>
     </div>
   )
