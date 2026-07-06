@@ -594,6 +594,8 @@ function CompleteProfileModal({ account, onClose, onSaved }) {
   const [loading, setLoading] = useState(false)
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }))
 
+  const allFilled = form.name.trim() && form.establishmentName.trim() && form.address.trim() && form.city.trim()
+
   async function submit(e) {
     e.preventDefault()
     if (!form.name.trim() || !form.establishmentName.trim() || !form.address.trim() || !form.city.trim()) {
@@ -643,7 +645,7 @@ function CompleteProfileModal({ account, onClose, onSaved }) {
         </label>
 
         {error && <p style={{ color: '#e53e3e', fontSize: '13px', margin: '4px 0' }}>{error}</p>}
-        <button className="primary-full" type="submit" disabled={loading}>
+        <button className="primary-full" type="submit" disabled={loading || !allFilled}>
           {loading ? 'Salvando…' : 'Salvar e continuar'}
         </button>
       </form>
@@ -652,7 +654,7 @@ function CompleteProfileModal({ account, onClose, onSaved }) {
 }
 
 function EditProfileModal({ account, onClose, onSaved }) {
-  const [form, setForm] = useState({
+  const initial = useMemo(() => ({
     name: account.name || '',
     whatsapp: account.whatsapp || '',
     address: account.address || '',
@@ -660,20 +662,27 @@ function EditProfileModal({ account, onClose, onSaved }) {
     cnpj: account.cnpj || '',
     establishmentName: account.establishmentName || '',
     invoicePreference: account.invoicePreference || 'whatsapp',
-  })
+  }), [])
+  const [form, setForm] = useState(initial)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }))
 
+  const changedFields = useMemo(() =>
+    Object.fromEntries(Object.entries(form).filter(([k, v]) => v !== initial[k]))
+  , [form, initial])
+  const hasChanges = Object.keys(changedFields).length > 0
+
   async function submit(e) {
     e.preventDefault()
+    if (!hasChanges) return
     setLoading(true)
     setError('')
     try {
       const res = await fetch(`${API_URL}/api/update-profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: account.id, ...form }),
+        body: JSON.stringify({ userId: account.id, ...changedFields }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -737,7 +746,7 @@ function EditProfileModal({ account, onClose, onSaved }) {
           {error && <p style={{ color: '#e53e3e', fontSize: '13px', margin: '4px 0' }}>{error}</p>}
         </div>
         <div className="edit-profile-footer">
-          <button className="primary-full" type="submit" disabled={loading}>
+          <button className="primary-full" type="submit" disabled={loading || !hasChanges}>
             {loading ? 'Salvando…' : 'Salvar informações'}
           </button>
         </div>
