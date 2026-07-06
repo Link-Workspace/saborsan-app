@@ -222,7 +222,7 @@ function App() {
     }
   }
 
-  function handleSaleComplete(sale) {
+  async function handleSaleComplete(sale) {
     setShowRegisterSale(false)
     setToast(`Venda para ${sale.client} registrada! Pedido ${sale.id}.`)
   }
@@ -289,7 +289,7 @@ function App() {
         )}
 
         {showRegisterSale && (
-          <RegisterSaleSheet onClose={() => setShowRegisterSale(false)} onComplete={handleSaleComplete} products={dbProducts} citiesData={citiesData} />
+          <RegisterSaleSheet onClose={() => setShowRegisterSale(false)} onComplete={handleSaleComplete} products={dbProducts} citiesData={citiesData} account={account} />
         )}
 
         {toast && <div className="toast"><Check size={18} /> {toast}</div>}
@@ -567,6 +567,76 @@ function StandaloneSignupModal({ onClose, onCreated, onSwitchToLogin }) {
   )
 }
 
+function EditProfileModal({ account, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    name: account.name || '',
+    whatsapp: account.whatsapp || '',
+    address: account.address || '',
+    cnpj: account.cnpj || '',
+  })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const update = (field, value) => setForm((f) => ({ ...f, [field]: value }))
+
+  async function submit(e) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch(`${API_URL}/api/update-profile`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: account.id, ...form }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      onSaved({ ...account, ...data.user })
+    } catch (err) {
+      setError(err.message || 'Erro ao salvar. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="modal-backdrop">
+      <form className="account-modal" onSubmit={submit}>
+        <button className="sheet-close" type="button" onClick={onClose} aria-label="Fechar"><X size={20} /></button>
+        <span className="small-badge">Minha conta</span>
+        <h2>Editar informações de contato</h2>
+        <p className="modal-copy">Atualize seus dados de contato e entrega.</p>
+
+        <label>
+          Nome
+          <input value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="Seu nome completo" />
+        </label>
+        <label>
+          E-mail
+          <input type="email" value={account.email} disabled style={{ opacity: 0.5 }} />
+        </label>
+        <label>
+          WhatsApp
+          <input value={form.whatsapp} onChange={(e) => update('whatsapp', e.target.value)} placeholder="(49) 99999-0000" />
+        </label>
+        <label>
+          Endereço
+          <input value={form.address} onChange={(e) => update('address', e.target.value)} placeholder="Rua, número, bairro, cidade" />
+        </label>
+        {account.isCompany && (
+          <label>
+            CNPJ
+            <input value={form.cnpj} onChange={(e) => update('cnpj', e.target.value)} placeholder="00.000.000/0000-00" />
+          </label>
+        )}
+        {error && <p style={{ color: '#e53e3e', fontSize: '13px', margin: '4px 0' }}>{error}</p>}
+        <button className="primary-full" type="submit" disabled={loading}>
+          {loading ? 'Salvando…' : 'Salvar informações'}
+        </button>
+      </form>
+    </div>
+  )
+}
+
 function NewsScreen({ onSelect }) {
   return (
     <section className="news-screen">
@@ -602,6 +672,8 @@ function NewsScreen({ onSelect }) {
 }
 
 function AccountScreen({ account, orders, setAccount, onExplore, onShowLogin, onShowSignup, onSelectOrder, onSelectClient, onShowRegisterSale, sellerData }) {
+  const [showEditProfile, setShowEditProfile] = useState(false)
+
   if (account?.role === 'seller') {
     return <SellerDashboard account={account} setAccount={setAccount} onSelectClient={onSelectClient} onShowRegisterSale={onShowRegisterSale} sellerData={sellerData} />
   }
@@ -629,10 +701,16 @@ function AccountScreen({ account, orders, setAccount, onExplore, onShowLogin, on
             <div>
               <h2>{account.isCompany ? 'Conta empresarial' : 'Conta cliente'}</h2>
               <p>{account.email}</p>
+              {account.name && <span>{account.name}</span>}
               <span>WhatsApp: {account.whatsapp}</span>
+              {account.address && <span>{account.address}</span>}
               {account.isCompany && <span>CNPJ: {account.cnpj}</span>}
             </div>
           </div>
+
+          <button className="ghost-full" type="button" onClick={() => setShowEditProfile(true)} style={{ marginBottom: '8px' }}>
+            Editar informações de contato
+          </button>
 
           <div className="section-title-row compact">
             <div>
@@ -649,6 +727,14 @@ function AccountScreen({ account, orders, setAccount, onExplore, onShowLogin, on
           </div>
 
           <button className="ghost-full" type="button" onClick={() => setAccount(null)}>Sair da conta</button>
+
+          {showEditProfile && (
+            <EditProfileModal
+              account={account}
+              onClose={() => setShowEditProfile(false)}
+              onSaved={(updated) => { setAccount(updated); setShowEditProfile(false) }}
+            />
+          )}
         </>
       )}
     </section>
@@ -1323,7 +1409,7 @@ function ClientDetailSheet({ client, onClose }) {
   )
 }
 
-function RegisterSaleSheet({ onClose, onComplete, products, citiesData }) {
+function RegisterSaleSheet({ onClose, onComplete, products, citiesData, account }) {
   const [step, setStep] = useState('city')
   const [selectedCity, setSelectedCity] = useState(null)
   const [selectedClient, setSelectedClient] = useState(null)
@@ -1353,20 +1439,31 @@ function RegisterSaleSheet({ onClose, onComplete, products, citiesData }) {
     })
   }
 
-  function submitSale() {
+  async function submitSale() {
     const items = selectedProductIds.map((id) => {
       const p = products.find((pr) => pr.id === id)
       return { name: p.name, quantity: form.products[id] }
     })
-    onComplete({
-      id: `SAB-${Math.floor(1000 + Math.random() * 8999)}`,
-      city: selectedCity,
-      client: selectedClient.name,
-      items,
+    const saleData = {
+      userId: account?.id,
+      clientId: selectedClient?.id || null,
+      clientName: selectedClient?.name,
       payment: form.payment,
       observations: form.observations,
-      date: new Date().toLocaleDateString('pt-BR')
-    })
+      saleDate: new Date().toLocaleDateString('pt-BR'),
+      items,
+    }
+    try {
+      const res = await fetch(`${API_URL}/api/sales`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(saleData),
+      })
+      const data = await res.json()
+      onComplete(data.sale || { id: `SAB-${Math.floor(1000 + Math.random() * 8999)}`, client: selectedClient?.name })
+    } catch {
+      onComplete({ id: `SAB-${Math.floor(1000 + Math.random() * 8999)}`, client: selectedClient?.name })
+    }
   }
 
   return (
