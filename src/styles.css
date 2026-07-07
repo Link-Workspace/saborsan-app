@@ -1114,6 +1114,32 @@ button { -webkit-tap-highlight-color: transparent; }
   box-shadow: 0 20px 45px rgba(8,47,99,.24);
   z-index: 40;
 }
+.push-notif-banner {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 8px 32px rgba(8,47,99,.18);
+  z-index: 50;
+  animation: slideDown .3s ease;
+  cursor: pointer;
+  border-left: 4px solid var(--orange);
+}
+.push-notif-logo { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; }
+.push-notif-banner > div { flex: 1; }
+.push-notif-banner strong { font-size: .9rem; color: var(--navy); display: block; font-weight: 800; }
+.push-notif-banner p { font-size: .82rem; color: var(--muted); margin: 0; font-weight: 600; }
+.push-notif-banner > button { background: none; border: none; color: var(--muted); cursor: pointer; flex-shrink: 0; }
+@keyframes slideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
 
 @media (max-width: 470px) {
   .app-shell { padding: 0; }

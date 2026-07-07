@@ -84,10 +84,32 @@ app.http('orders', {
         const { orderId, status, step } = await request.json();
         if (!orderId) return { status: 400, jsonBody: { error: 'orderId é obrigatório' } };
 
+        // Buscar userId do pedido para notificação
+        const orderInfo = await sql.query`SELECT userId, productName FROM Orders WHERE id = ${orderId}`;
+
         await sql.query`
           UPDATE Orders SET status = ${status}, step = ${step}
           WHERE id = ${orderId}
         `;
+
+        // Enviar notificação push se o status não for cancelado
+        if (status !== 'Cancelado' && orderInfo.recordset.length > 0) {
+          const { userId, productName } = orderInfo.recordset[0];
+          if (userId) {
+            const baseUrl = process.env.BACKEND_URL || `https://${process.env.WEBSITE_HOSTNAME}`;
+            fetch(`${baseUrl}/api/send-notification`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId,
+                title: `Pedido ${orderId}`,
+                body: `${productName} — ${status}`,
+                data: { orderId, status },
+              }),
+            }).catch(() => {});
+          }
+        }
+
         return { jsonBody: { success: true } };
       }
     } catch (error) {

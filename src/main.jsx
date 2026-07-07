@@ -28,10 +28,25 @@ import {
 } from 'lucide-react'
 import { citiesData as citiesDataStatic, demoOrders, upcomingProducts } from './data.js'
 import { makeT } from './translations.js'
+import { requestPushPermission, onForegroundMessage } from './firebase.js'
 import './styles.css'
 
 const BASE = import.meta.env.BASE_URL
 const API_URL = import.meta.env.VITE_API_URL || 'https://saborsan-api-c7bvfthfggfgergz.brazilsouth-01.azurewebsites.net'
+
+function playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain); gain.connect(ctx.destination)
+    osc.frequency.setValueAtTime(880, ctx.currentTime)
+    osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1)
+    gain.gain.setValueAtTime(0.3, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35)
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.35)
+  } catch {}
+}
 
 function getDeviceId() {
   let id = localStorage.getItem('saborsan-device-id')
@@ -63,6 +78,8 @@ function App() {
   const [productsLoading, setProductsLoading] = useState(true)
   const [sellerData, setSellerData] = useState(null)
   const [citiesData, setCitiesData] = useState([])
+  const [pushNotif, setPushNotif] = useState(null) // { title, body }
+  const notifSettings = useRef({ sound: true, delivery: true })
   const [account, setAccount] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('saborsan-account')) || null
@@ -96,6 +113,23 @@ function App() {
       .catch(() => {})
       .finally(() => setProductsLoading(false))
   }, [])
+
+  // Registro de push notification e listener de mensagens em foreground
+  useEffect(() => {
+    const deviceId = getDeviceId()
+    requestPushPermission(deviceId, account?.id || null, API_URL).catch(() => {})
+
+    const unsub = onForegroundMessage((payload) => {
+      const title = payload.notification?.title || 'Saborsan'
+      const body = payload.notification?.body || ''
+      if (notifSettings.current.sound) playNotificationSound()
+      if (notifSettings.current.delivery) {
+        setPushNotif({ title, body })
+        setTimeout(() => setPushNotif(null), 6000)
+      }
+    })
+    return () => unsub && unsub()
+  }, [account?.id])
 
   useEffect(() => {
     localStorage.setItem('saborsan-account', JSON.stringify(account))
@@ -334,6 +368,7 @@ function App() {
             language={language}
             onLanguageChange={handleLanguageChange}
             onClose={() => setShowSettings(false)}
+            onNotifSettingChange={(field, value) => { notifSettings.current = { ...notifSettings.current, [field]: value } }}
             onDeleteAccount={async () => {
               try {
                 await fetch(`${API_URL}/api/delete-account?userId=${account.id}`, { method: 'DELETE' })
@@ -347,6 +382,17 @@ function App() {
         )}
 
         {toast && <div className="toast"><Check size={18} /> {toast}</div>}
+
+        {pushNotif && (
+          <div className="push-notif-banner" onClick={() => setPushNotif(null)}>
+            <img src={BASE + 'images/logo-saborsan.png'} alt="Saborsan" className="push-notif-logo" />
+            <div>
+              <strong>{pushNotif.title}</strong>
+              <p>{pushNotif.body}</p>
+            </div>
+            <button type="button" onClick={() => setPushNotif(null)}><X size={16} /></button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -720,7 +766,7 @@ function CompleteProfileModal({ account, onClose, onSaved }) {
   )
 }
 
-function SettingsScreen({ account, language, onLanguageChange, onClose, onDeleteAccount, t }) {
+function SettingsScreen({ account, language, onLanguageChange, onClose, onDeleteAccount, onNotifSettingChange, t }) {
   const [settings, setSettings] = useState({ language, notificationSound: true, deliveryNotifications: true })
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -734,7 +780,13 @@ function SettingsScreen({ account, language, onLanguageChange, onClose, onDelete
     if (!account?.id) return
     fetch(`${API_URL}/api/settings?userId=${account.id}`)
       .then(r => r.json())
-      .then(d => { if (d.settings) setSettings({ ...d.settings, notificationSound: !!d.settings.notificationSound, deliveryNotifications: !!d.settings.deliveryNotifications }) })
+      .then(d => {
+        if (d.settings) {
+          const s = { ...d.settings, notificationSound: !!d.settings.notificationSound, deliveryNotifications: !!d.settings.deliveryNotifications }
+          setSettings(s)
+          notifSettings.current = { sound: s.notificationSound, delivery: s.deliveryNotifications }
+        }
+      })
       .catch(() => {})
   }, [account?.id])
 
@@ -742,6 +794,8 @@ function SettingsScreen({ account, language, onLanguageChange, onClose, onDelete
     const updated = { ...settings, [field]: value }
     setSettings(updated)
     if (field === 'language') onLanguageChange(value)
+    if (field === 'notificationSound') onNotifSettingChange?.('sound', value)
+    if (field === 'deliveryNotifications') onNotifSettingChange?.('delivery', value)
     if (!account?.id) return
     fetch(`${API_URL}/api/settings`, {
       method: 'PATCH',

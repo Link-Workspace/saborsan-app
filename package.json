@@ -19,6 +19,7 @@
     "@capacitor/core": "latest",
     "@elevenlabs/client": "^1.14.0",
     "@vitejs/plugin-react": "latest",
+    "firebase": "^12.15.0",
     "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
