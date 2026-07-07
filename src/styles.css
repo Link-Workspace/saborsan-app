@@ -63,6 +63,123 @@ button { -webkit-tap-highlight-color: transparent; }
   position: relative;
   z-index: 5;
 }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.notif-btn { position: relative; }
+.notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #e53e3e;
+  color: #fff;
+  font-size: .65rem;
+  font-weight: 900;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  padding: 0 4px;
+  border: 2px solid var(--cream-2);
+}
+.notif-panel {
+  position: absolute;
+  top: 82px;
+  right: 12px;
+  width: calc(100% - 24px);
+  background: var(--white);
+  border-radius: 20px;
+  box-shadow: 0 16px 40px rgba(8,47,99,.16);
+  padding: 12px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.account-menu-panel {
+  position: absolute;
+  top: 82px;
+  right: 12px;
+  background: var(--white);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(8,47,99,.16);
+  overflow: hidden;
+  z-index: 20;
+  min-width: 160px;
+}
+.account-menu-panel button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  color: var(--navy);
+  font-weight: 700;
+  font-size: .95rem;
+  cursor: pointer;
+  text-align: left;
+}
+.account-menu-panel button:last-child { border-bottom: none; }
+.account-menu-panel button:hover { background: var(--cream-2); }
+/* Settings */
+.settings-sheet { border-radius: 32px 32px 0 0; }
+.settings-section { margin: 8px 0 16px; display: flex; flex-direction: column; gap: 4px; }
+.settings-label { font-weight: 800; font-size: .9rem; color: var(--navy); display: block; margin-bottom: 6px; }
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.settings-row small { color: var(--muted); font-size: .8rem; display: block; margin-top: 2px; }
+.toggle-btn {
+  width: 48px; height: 26px;
+  border-radius: 999px;
+  background: #d1d5db;
+  border: none;
+  position: relative;
+  cursor: pointer;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+.toggle-btn.on { background: var(--orange); }
+.toggle-btn span {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.toggle-btn.on span { transform: translateX(22px); }
+.settings-link-btn {
+  background: none; border: none;
+  color: var(--navy); font-weight: 700;
+  font-size: .95rem; cursor: pointer;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  width: 100%;
+}
+.settings-link-btn:last-child { border-bottom: none; }
+.settings-delete-btn {
+  width: 100%; padding: 14px;
+  background: rgba(229,62,62,.08);
+  border: 1px solid rgba(229,62,62,.2);
+  border-radius: 14px;
+  color: #e53e3e; font-weight: 800;
+  cursor: pointer; font-size: .95rem;
+}
+.settings-delete-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.delete-confirm p { color: var(--muted); font-size: .9rem; line-height: 1.5; margin-bottom: 12px; }
 .logo-pill {
   background: rgba(255,255,255,.78);
   border: 1px solid var(--line);
@@ -129,7 +246,10 @@ button { -webkit-tap-highlight-color: transparent; }
   font-weight: 900;
   background: rgba(255,255,255,.2);
   color: #fff;
-  border: 1px solid rgba(255,255,255,.18);
+}
+.account-modal .small-badge {
+  background: rgba(234,88,12,.12);
+  color: var(--orange);
 }
 .navy-badge { background: var(--navy); border-color: transparent; }
 .hero-card-mobile h1, .page-heading h1 {
@@ -359,6 +479,7 @@ button { -webkit-tap-highlight-color: transparent; }
   cursor: pointer;
 }
 .primary-full { background: linear-gradient(135deg, var(--orange), var(--orange-2)); color: #fff; box-shadow: 0 16px 32px rgba(242,106,0,.22); }
+.primary-full:disabled { background: #d1d5db; box-shadow: none; cursor: not-allowed; opacity: 0.6; }
 .ghost-full { margin-top: 18px; background: rgba(8,47,99,.08); color: var(--navy); }
 
 .modal-backdrop { align-items: center; justify-content: center; padding: 18px; }
@@ -369,6 +490,27 @@ button { -webkit-tap-highlight-color: transparent; }
   padding: 24px;
   position: relative;
   box-shadow: 0 28px 80px rgba(8,47,99,.28);
+}
+.edit-profile-modal {
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+  padding: 0;
+  overflow: hidden;
+}
+.edit-profile-modal .sheet-close { top: 16px; right: 16px; }
+.edit-profile-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 24px 8px;
+  scrollbar-width: none;
+}
+.edit-profile-scroll::-webkit-scrollbar { display: none; }
+.edit-profile-footer {
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--cream-2);
+  border-radius: 0 0 32px 32px;
 }
 .account-modal h2, .success-state h2 {
   font-family: 'Montserrat', sans-serif;
@@ -397,6 +539,19 @@ button { -webkit-tap-highlight-color: transparent; }
   outline: none;
   color: var(--navy);
   font-weight: 700;
+}
+.feedback-field {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  background: #fff;
+  outline: none;
+  color: var(--navy);
+  font-weight: 700;
+  font-family: inherit;
+  font-size: inherit;
+  resize: none;
 }
 .toggle-company {
   display: flex !important;
@@ -958,6 +1113,32 @@ button { -webkit-tap-highlight-color: transparent; }
   font-weight: 800;
   box-shadow: 0 20px 45px rgba(8,47,99,.24);
   z-index: 40;
+}
+.push-notif-banner {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 8px 32px rgba(8,47,99,.18);
+  z-index: 50;
+  animation: slideDown .3s ease;
+  cursor: pointer;
+  border-left: 4px solid var(--orange);
+}
+.push-notif-logo { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; }
+.push-notif-banner > div { flex: 1; }
+.push-notif-banner strong { font-size: .9rem; color: var(--navy); display: block; font-weight: 800; }
+.push-notif-banner p { font-size: .82rem; color: var(--muted); margin: 0; font-weight: 600; }
+.push-notif-banner > button { background: none; border: none; color: var(--muted); cursor: pointer; flex-shrink: 0; }
+@keyframes slideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 @media (max-width: 470px) {

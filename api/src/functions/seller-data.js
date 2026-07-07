@@ -38,11 +38,11 @@ app.http('seller-data', {
       // Buscar alertas, clientes com detalhes, cidades — em paralelo
       const [alertsResult, clientsResult, productsResult, ordersResult, citiesResult, cityClientsResult] = await Promise.all([
         sql.query`SELECT id, type, text FROM SellerAlerts WHERE sellerId = ${seller.id} AND active = 1`,
-        sql.query`SELECT id, cityId, name, segment, priority, priorityReason, tag, lastPurchase, lastValue, avgTicket, suggestion, pendency, bestDay FROM Clients ORDER BY CASE priority WHEN 'alta' THEN 1 WHEN 'média' THEN 2 ELSE 3 END`,
+        sql.query`SELECT id, cityId, establishmentName AS name, clientName, segment, priority, priorityReason, tag, lastPurchase, lastValue, avgTicket, suggestion, pendency, bestDay, address, contactNumber, invoicePreference FROM Clients ORDER BY CASE priority WHEN 'alta' THEN 1 WHEN 'média' THEN 2 ELSE 3 END`,
         sql.query`SELECT clientId, productName, type FROM ClientProducts`,
         sql.query`SELECT clientId, orderId, orderDate, value, items FROM ClientOrders ORDER BY id DESC`,
         sql.query`SELECT id, name FROM Cities ORDER BY name`,
-        sql.query`SELECT id, cityId, name, segment FROM Clients ORDER BY name`,
+        sql.query`SELECT id, cityId, establishmentName AS name, segment FROM Clients ORDER BY establishmentName`,
       ]);
 
       // Montar clientes completos
