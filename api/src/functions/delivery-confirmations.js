@@ -29,7 +29,7 @@ app.http('delivery-confirmations', {
         const result = await pool.request().query`
           SELECT o.id AS orderId, o.clientName, d.code AS deliveryCode
           FROM GestaoOrders o
-          INNER JOIN DeliveryOrders dord ON dord.order_code = o.id
+          INNER JOIN DeliveryOrders dord ON dord.order_id = o.id
           INNER JOIN Deliveries d ON d.id = dord.delivery_id
           WHERE o.status = N'Separação'
             AND d.seller_id = ${sellerId}
@@ -59,7 +59,7 @@ app.http('delivery-confirmations', {
             const check = await pool.request().query`
               SELECT 1 FROM DeliveryOrders dord
               INNER JOIN Deliveries d ON d.id = dord.delivery_id
-              WHERE dord.order_code = ${orderId} AND d.seller_id = ${sellerId}
+              WHERE dord.order_id = ${orderId} AND d.seller_id = ${sellerId}
             `;
             if (!check.recordset.length) {
               return { status: 403, jsonBody: { error: 'Você não está vinculado a uma entrega com este pedido.' } };

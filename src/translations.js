@@ -1,6 +1,6 @@
 ﻿export const translations = {
   pt: {
-    nav_catalog: 'Catálogo', nav_news: 'Novidades', nav_seller: 'Vendedor', nav_account: 'Conta',
+    nav_catalog: 'Catálogo', nav_news: 'Novidades', nav_seller: 'Vendedor', nav_deliveries: 'Entregas', nav_account: 'Conta',
     menu_account: 'Conta', menu_settings: 'Configurações',
     catalog_badge: 'Distribuidora de alimentos',
     catalog_hero_title: 'Alimentos que chegam com qualidade.',
@@ -84,7 +84,7 @@
     news_whatsapp_sub: 'Quando o cliente demonstrar interesse, a equipe pode avisar sobre lançamentos, promoções e itens sazonais.',
   },
   en: {
-    nav_catalog: 'Catalog', nav_news: 'News', nav_seller: 'Seller', nav_account: 'Account',
+    nav_catalog: 'Catalog', nav_news: 'News', nav_seller: 'Seller', nav_deliveries: 'Deliveries', nav_account: 'Account',
     menu_account: 'Account', menu_settings: 'Settings',
     catalog_badge: 'Food distributor',
     catalog_hero_title: 'Food that arrives with quality.',
@@ -168,7 +168,7 @@
     news_whatsapp_sub: 'When the client shows interest, the team can notify about launches, promotions and seasonal items.',
   },
   es: {
-    nav_catalog: 'Catálogo', nav_news: 'Novedades', nav_seller: 'Vendedor', nav_account: 'Cuenta',
+    nav_catalog: 'Catálogo', nav_news: 'Novedades', nav_seller: 'Vendedor', nav_deliveries: 'Entregas', nav_account: 'Cuenta',
     menu_account: 'Cuenta', menu_settings: 'Configuración',
     catalog_badge: 'Distribuidora de alimentos',
     catalog_hero_title: 'Alimentos que llegan con calidad.',

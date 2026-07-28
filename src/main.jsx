@@ -23,6 +23,7 @@ import {
   Settings,
   ShoppingBag,
   Sparkles,
+  Truck,
   UserRound,
   X
 } from 'lucide-react'
@@ -88,6 +89,8 @@ function App() {
     }
   })
   const [orders, setOrders] = useState([])
+  const [deliveries, setDeliveries] = useState([])
+  const [deliveriesLoading, setDeliveriesLoading] = useState(false)
   const [toast, setToast] = useState('')
   const [showLogin, setShowLogin] = useState(false)
   const [showSignup, setShowSignup] = useState(false)
@@ -166,8 +169,16 @@ function App() {
           if (data.cities) setCitiesData(data.cities)
         })
         .catch(() => {})
+      // Carregar entregas do vendedor
+      setDeliveriesLoading(true)
+      fetch(`${API_URL}/api/deliveries?userId=${account.id}`)
+        .then(r => r.json())
+        .then(data => { if (data.deliveries) setDeliveries(data.deliveries) })
+        .catch(() => {})
+        .finally(() => setDeliveriesLoading(false))
     } else {
       setSellerData(null)
+      setDeliveries([])
     }
     if (account?.id && account?.role !== 'seller') {
       fetch(`${API_URL}/api/orders?userId=${account.id}`)
@@ -358,9 +369,10 @@ function App() {
           {tab === 'news' && <NewsScreen onSelect={setSelectedProduct} t={t} />}
           {tab === 'account' && <AccountScreen account={account} orders={orders} setAccount={setAccount} onExplore={() => setTab('catalog')} onShowLogin={() => setShowLogin(true)} onShowSignup={() => setShowSignup(true)} onSelectOrder={setSelectedOrder} onSelectClient={setSelectedSellerClient} onShowRegisterSale={() => setShowRegisterSale(true)} sellerData={sellerData} t={t} />}
           {tab === 'chat' && <ChatScreen account={account} t={t} />}
+          {tab === 'deliveries' && <DeliveriesScreen deliveries={deliveries} loading={deliveriesLoading} t={t} />}
         </main>
 
-        <BottomNav tab={tab} setTab={setTab} t={t} />
+        <BottomNav tab={tab} setTab={setTab} account={account} t={t} />
 
         {selectedProduct && (
           <ProductSheet product={selectedProduct} onClose={() => setSelectedProduct(null)} onOrder={startOrder} t={t} />
@@ -2093,11 +2105,72 @@ function RegisterSaleSheet({ onClose, onComplete, products, citiesData, account,
   )
 }
 
-function BottomNav({ tab, setTab, t }) {
+function DeliveriesScreen({ deliveries, loading, t }) {
+  const statusColor = (status) => {
+    if (!status) return ''
+    const s = status.toLowerCase()
+    if (s.includes('entregue') || s.includes('concluí')) return 'done'
+    if (s.includes('rota') || s.includes('andamento')) return 'ongoing'
+    if (s.includes('separaç') || s.includes('pronto')) return 'ready'
+    return ''
+  }
+
+  return (
+    <section className="account-screen">
+      <div className="page-heading">
+        <span className="small-badge"><Truck size={15} /> Entregas</span>
+        <h1>Suas entregas</h1>
+        <p>Acompanhe as entregas atribuídas a você e os pedidos de cada rota.</p>
+      </div>
+
+      {loading ? (
+        Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="order-card skeleton" style={{ height: 80 }} />
+        ))
+      ) : deliveries.length === 0 ? (
+        <div className="empty-account">
+          <Truck size={36} />
+          <h2>Nenhuma entrega encontrada</h2>
+          <p>Quando uma entrega for atribuída a você ela aparecerá aqui.</p>
+        </div>
+      ) : deliveries.map((delivery) => (
+        <div key={delivery.id} className="delivery-card">
+          <div className="delivery-card-header">
+            <div className="delivery-card-title">
+              <Truck size={16} />
+              <strong>{delivery.code}</strong>
+            </div>
+            {delivery.status && (
+              <span className={`delivery-status-badge ${statusColor(delivery.status)}`}>{delivery.status}</span>
+            )}
+          </div>
+          {delivery.deliveryDate && (
+            <p className="delivery-date">Data: {new Date(delivery.deliveryDate).toLocaleDateString('pt-BR')}</p>
+          )}
+          {delivery.orders.length > 0 && (
+            <div className="delivery-orders-list">
+              {delivery.orders.map((order) => (
+                <div key={order.id} className="delivery-order-item">
+                  <span className="delivery-order-id">{order.id}</span>
+                  <span className="delivery-order-client">{order.clientName}</span>
+                  <span className={`delivery-order-status ${statusColor(order.status)}`}>{order.status}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </section>
+  )
+}
+
+function BottomNav({ tab, setTab, account, t }) {
   const items = [
     { id: 'catalog', label: t('nav_catalog'), icon: LayoutGrid },
     { id: 'news', label: t('nav_news'), icon: Sparkles },
-    { id: 'chat', label: t('nav_seller'), icon: MessageCircle },
+    account?.role === 'seller'
+      ? { id: 'deliveries', label: t('nav_deliveries'), icon: Truck }
+      : { id: 'chat', label: t('nav_seller'), icon: MessageCircle },
     { id: 'account', label: t('nav_account'), icon: UserRound }
   ]
   return (
