@@ -13,16 +13,17 @@ app.http('seller-data', {
   methods: ['GET'],
   authLevel: 'anonymous',
   handler: async (request, context) => {
+    let pool;
     try {
       const userId = request.query.get('userId');
       if (!userId) {
         return { status: 400, jsonBody: { error: 'userId é obrigatório' } };
       }
 
-      await sql.connect(sqlConfig);
+      pool = await new sql.ConnectionPool(sqlConfig).connect();
 
       // Buscar perfil do vendedor + nome do usuário
-      const sellerResult = await sql.query`
+      const sellerResult = await pool.request().query`
         SELECT s.id, s.city, s.dailyGoal, s.soldToday, u.name
         FROM Sellers s
         INNER JOIN Users u ON u.id = s.userId
@@ -30,6 +31,7 @@ app.http('seller-data', {
       `;
 
       if (sellerResult.recordset.length === 0) {
+        await pool.close();
         return { status: 404, jsonBody: { error: 'Perfil de vendedor não encontrado' } };
       }
 
@@ -37,12 +39,12 @@ app.http('seller-data', {
 
       // Buscar alertas, clientes com detalhes, cidades — em paralelo
       const [alertsResult, clientsResult, productsResult, ordersResult, citiesResult, cityClientsResult] = await Promise.all([
-        sql.query`SELECT id, type, text FROM SellerAlerts WHERE sellerId = ${seller.id} AND active = 1`,
-        sql.query`SELECT id, cityId, establishmentName AS name, clientName, segment, priority, priorityReason, tag, lastPurchase, lastValue, avgTicket, suggestion, pendency, bestDay, address, contactNumber, invoicePreference FROM Clients ORDER BY CASE priority WHEN 'alta' THEN 1 WHEN 'média' THEN 2 ELSE 3 END`,
-        sql.query`SELECT clientId, productName, type FROM ClientProducts`,
-        sql.query`SELECT clientId, orderId, orderDate, value, items FROM ClientOrders ORDER BY id DESC`,
-        sql.query`SELECT id, name FROM Cities ORDER BY name`,
-        sql.query`SELECT id, cityId, establishmentName AS name, segment FROM Clients ORDER BY establishmentName`,
+        pool.request().query`SELECT id, type, text FROM SellerAlerts WHERE sellerId = ${seller.id} AND active = 1`,
+        pool.request().query`SELECT id, cityId, establishmentName AS name, clientName, segment, priority, priorityReason, tag, lastPurchase, lastValue, avgTicket, suggestion, pendency, bestDay, address, contactNumber, invoicePreference FROM Clients ORDER BY CASE priority WHEN 'alta' THEN 1 WHEN 'média' THEN 2 ELSE 3 END`,
+        pool.request().query`SELECT clientId, productName, type FROM ClientProducts`,
+        pool.request().query`SELECT clientId, orderId, orderDate, value, items FROM ClientOrders ORDER BY id DESC`,
+        pool.request().query`SELECT id, name FROM Cities ORDER BY name`,
+        pool.request().query`SELECT id, cityId, establishmentName AS name, segment FROM Clients ORDER BY establishmentName`,
       ]);
 
       // Montar clientes completos
@@ -81,7 +83,7 @@ app.http('seller-data', {
       context.error('Erro na função seller-data:', error);
       return { status: 500, jsonBody: { error: 'Erro interno do servidor' } };
     } finally {
-      await sql.close();
+      if (pool) await pool.close();
     }
   },
 });

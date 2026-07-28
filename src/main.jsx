@@ -97,6 +97,8 @@ function App() {
   const [selectedSellerClient, setSelectedSellerClient] = useState(null)
   const [showRegisterSale, setShowRegisterSale] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [orderConfirmations, setOrderConfirmations] = useState([]) // pedidos aguardando confirmação do entregador
+  const confirmFetchRef = useRef(null)
 
   useEffect(() => {
     fetch(`${API_URL}/api/products`)
@@ -123,6 +125,11 @@ function App() {
       const title = payload.notification?.title || 'Saborsan'
       const body = payload.notification?.body || ''
       if (notifSettings.current.sound) playNotificationSound()
+      // Se for confirmação de pedido, atualizar lista imediatamente
+      if (payload.data?.type === 'order_ready_check' && confirmFetchRef.current) {
+        confirmFetchRef.current()
+        return
+      }
       if (notifSettings.current.delivery) {
         setPushNotif({ title, body })
         setTimeout(() => setPushNotif(null), 6000)
@@ -130,6 +137,24 @@ function App() {
     })
     return () => unsub && unsub()
   }, [account?.id])
+
+  // Polling de confirmações pendentes para entregadores
+  useEffect(() => {
+    if (!account?.id || account?.role !== 'seller') {
+      setOrderConfirmations([])
+      return
+    }
+    const fetchConfirmations = () => {
+      fetch(`${API_URL}/api/delivery-confirmations?userId=${account.id}`)
+        .then((r) => r.json())
+        .then((data) => { if (data.confirmations) setOrderConfirmations(data.confirmations) })
+        .catch(() => {})
+    }
+    confirmFetchRef.current = fetchConfirmations
+    fetchConfirmations()
+    const interval = setInterval(fetchConfirmations, 30000)
+    return () => { clearInterval(interval); confirmFetchRef.current = null }
+  }, [account?.id, account?.role])
 
   useEffect(() => {
     localStorage.setItem('saborsan-account', JSON.stringify(account))
@@ -284,6 +309,21 @@ function App() {
     setToast(`Venda para ${sale.client} registrada! Pedido ${sale.id}.`)
   }
 
+  async function handleConfirmOrder(orderId) {
+    try {
+      const res = await fetch(`${API_URL}/api/delivery-confirmations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, userId: account?.id }),
+      })
+      if (!res.ok) throw new Error()
+      setOrderConfirmations((prev) => prev.filter((c) => c.orderId !== orderId))
+      setToast(`Pedido ${orderId} confirmado como pronto para entrar em rota!`)
+    } catch {
+      setToast('Erro ao confirmar. Tente novamente.')
+    }
+  }
+
   async function cancelOrder(orderId) {
     setOrders((current) => current.filter((o) => o.id !== orderId))
     setSelectedOrder(null)
@@ -393,6 +433,32 @@ function App() {
             <button type="button" onClick={() => setPushNotif(null)}><X size={16} /></button>
           </div>
         )}
+
+        {/* Modal de confirmação de pedido pronto — aparece no centro para o entregador */}
+        {orderConfirmations.length > 0 && account?.role === 'seller' && (() => {
+          const c = orderConfirmations[0]
+          return (
+            <div className="order-confirm-overlay">
+              <div className="order-confirm-modal">
+                <div className="order-confirm-icon"><PackageCheck size={36} /></div>
+                <h3>Pedido pronto para rota?</h3>
+                <p>O pedido <b>{c.orderId}</b> de <b>{c.customer}</b> está em separação para a entrega <b>{c.deliveryCode}</b>.</p>
+                <p className="order-confirm-sub">Confirme quando o pedido estiver separado e embalado para entrar em rota.</p>
+                <div className="order-confirm-actions">
+                  <button className="order-confirm-yes" onClick={() => handleConfirmOrder(c.orderId)}>
+                    <Check size={16} /> Sim, está pronto
+                  </button>
+                  <button className="order-confirm-no" onClick={() => setOrderConfirmations((prev) => prev.slice(1))}>
+                    Ainda não
+                  </button>
+                </div>
+                {orderConfirmations.length > 1 && (
+                  <p className="order-confirm-more">+{orderConfirmations.length - 1} pedido(s) aguardando confirmação</p>
+                )}
+              </div>
+            </div>
+          )
+        })()}
       </div>
     </div>
   )
