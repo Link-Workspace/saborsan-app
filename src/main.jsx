@@ -7,6 +7,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
   Clock3,
   Home,
   LayoutGrid,
@@ -18,6 +19,7 @@ import {
   Phone,
   Play,
   Plus,
+  Route,
   Search,
   Send,
   Settings,
@@ -62,6 +64,52 @@ const categories = ['Todos', 'Pão de queijo', 'Assados', 'Açaí', 'Croissant',
 const BRL_PHONE = '(49) 98421-0396'
 const PAYMENT_METHODS = ['PIX', 'À vista', 'Cartão de débito', 'Cartão de crédito', 'Boleto 30d', 'Boleto 60d']
 
+const SC_CITIES = [
+  'Abelardo Luz','Agrolândia','Agronômica','Água Doce','Águas de Chapecó','Águas Frias','Águas Mornas','Alfredo Wagner','Alto Bela Vista',
+  'Anchieta','Angelina','Anita Garibaldi','Anitápolis','Antônio Carlos','Apiúna','Arabutã','Araquari','Armazém','Arroio Trinta','Arvoredo',
+  'Ascurra','Atalanta','Aurora','Balneário Arroio do Silva','Balneário Barra do Sul','Balneário Camboriú','Balneário Gaivota',
+  'Balneário Piçarras','Balneário Rincão','Bandeirante','Barra Bonita','Barra Velha','Bela Vista do Toldo','Belmonte','Benedito Novo',
+  'Biguaçu','Blumenau','Bocaina do Sul','Bom Jardim da Serra','Bom Jesus','Bom Jesus do Oeste','Bom Retiro','Bombinhas','Botuverá',
+  'Braço do Norte','Braço do Trombudo','Brunópolis','Brusque','Caçador','Caibi','Calmon','Camboriú','Campo Alegre','Campo Belo do Sul',
+  'Campo Erê','Campos Novos','Canelinha','Canoinhas','Capão Alto','Capinzal','Capivari de Baixo','Catanduvas','Caxambu do Sul',
+  'Celso Ramos','Cerro Negro','Chapadão do Lageado','Chapecó','Cocal do Sul','Concórdia','Cordilheira Alta','Coronel Freitas',
+  'Coronel Martins','Correia Pinto','Corupá','Criciúma','Cunha Porã','Cunhataí','Curitibanos','Descanso','Dionísio Cerqueira',
+  'Dona Emma','Doutor Pedrinho','Entre Rios','Ermo','Erval Velho','Faxinal dos Guedes','Flor do Sertão','Florianópolis',
+  'Formosa do Sul','Forquilhinha','Fraiburgo','Frei Rogério','Galvão','Garopaba','Garuva','Gaspar','Governador Celso Ramos',
+  'Grão Pará','Gravatal','Guabiruba','Guaraciaba','Guaramirim','Guarujá do Sul','Guatambú','Herval d\'Oeste','Ibiam','Ibicaré',
+  'Ibirama','Içara','Ilhota','Imaruí','Imbituba','Imbuia','Indaial','Iomerê','Ipira','Iporã do Oeste','Ipuaçu','Ipumirim',
+  'Iraceminha','Irani','Irati','Irineópolis','Itá','Itaiópolis','Itajaí','Itapema','Itapiranga','Itapoá','Ituporanga','Jaborá',
+  'Jacinto Machado','Jaguaruna','Jaraguá do Sul','Jardinópolis','Joaçaba','Joinville','José Boiteux','Jupiá','Lacerdópolis',
+  'Lages','Laguna','Lajeado Grande','Laurentino','Lauro Müller','Lebon Régis','Leoberto Leal','Lindóia do Sul','Lontras',
+  'Luiz Alves','Luzerna','Macieira','Mafra','Major Gercino','Major Vieira','Maracajá','Maravilha','Marema','Massaranduba',
+  'Matos Costa','Meleiro','Mirim Doce','Modelo','Mondaí','Monte Carlo','Monte Castelo','Morro da Fumaça','Morro Grande',
+  'Navegantes','Nova Erechim','Nova Itaberaba','Nova Trento','Nova Veneza','Novo Horizonte','Orleans','Otacílio Costa','Ouro',
+  'Ouro Verde','Paial','Painel','Palhoça','Palma Sola','Palmeira','Palmitos','Papanduva','Paraíso','Passo de Torres',
+  'Passos Maia','Paulo Lopes','Pedras Grandes','Penha','Peritiba','Pescaria Brava','Petrolândia','Pinhalzinho','Pinheiro Preto',
+  'Piratuba','Planalto Alegre','Pomerode','Ponte Alta','Ponte Alta do Norte','Ponte Serrada','Porto Belo','Porto União',
+  'Pouso Redondo','Praia Grande','Presidente Castelo Branco','Presidente Getúlio','Presidente Nereu','Princesa','Quilombo',
+  'Rancho Queimado','Rio das Antas','Rio do Campo','Rio do Oeste','Rio do Sul','Rio dos Cedros','Rio Fortuna','Rio Negrinho',
+  'Rio Rufino','Riqueza','Rodeio','Romelândia','Salete','Saltinho','Salto Veloso','Sangão','Santa Cecília','Santa Helena',
+  'Santa Rosa de Lima','Santa Rosa do Sul','Santa Terezinha','Santa Terezinha do Progresso','Santiago do Sul',
+  'Santo Amaro da Imperatriz','São Bento do Sul','São Bernardino','São Carlos','São Cristóvão do Sul','São Domingos',
+  'São Francisco do Sul','São João Batista','São João do Itaperiú','São João do Oeste','São João do Sul','São Joaquim',
+  'São José','São José do Cedro','São José do Cerrito','São Lourenço do Oeste','São Ludgero','São Marcos',
+  'São Miguel da Boa Vista','São Miguel do Oeste','São Pedro de Alcântara','Saudades','Schroeder','Seara','Serra Alta',
+  'Siderópolis','Sombrio','Sul Brasil','Taió','Tangará','Tigrinhos','Tijucas','Timbé do Sul','Timbó','Timbó Grande',
+  'Três Barras','Treviso','Treze de Maio','Treze Tílias','Trombudo Central','Tubarão','Tunápolis','Turvo','União do Oeste',
+  'Urubici','Urupema','Urussanga','Vargeão','Vargem','Vargem Bonita','Vidal Ramos','Videira','Vitor Meireles','Witmarsum',
+  'Xanxerê','Xavantina','Xaxim','Zortéa',
+]
+
+function deliveryStatusColor(status) {
+  if (!status) return ''
+  const s = status.toLowerCase()
+  if (s.includes('entregue') || s.includes('concluí')) return 'done'
+  if (s.includes('rota') || s.includes('andamento')) return 'ongoing'
+  if (s.includes('separaç') || s.includes('pronto') || s.includes('carregando') || s.includes('planejada')) return 'ready'
+  return ''
+}
+
 function App() {
   const [language, setLanguage] = useState(() => localStorage.getItem('saborsan-lang') || 'pt')
   const t = useMemo(() => makeT(language), [language])
@@ -91,6 +139,9 @@ function App() {
   const [orders, setOrders] = useState([])
   const [deliveries, setDeliveries] = useState([])
   const [deliveriesLoading, setDeliveriesLoading] = useState(false)
+  const [newDeliveryOpen, setNewDeliveryOpen] = useState(false)
+  const [selectedDelivery, setSelectedDelivery] = useState(null)
+  const [vehiclesData, setVehiclesData] = useState([])
   const [toast, setToast] = useState('')
   const [showLogin, setShowLogin] = useState(false)
   const [showSignup, setShowSignup] = useState(false)
@@ -176,6 +227,11 @@ function App() {
         .then(data => { if (data.deliveries) setDeliveries(data.deliveries) })
         .catch(() => {})
         .finally(() => setDeliveriesLoading(false))
+      // Carregar veículos disponíveis para novas entregas
+      fetch(`${API_URL}/api/vehicles`)
+        .then(r => r.json())
+        .then(data => { if (data.vehicles) setVehiclesData(data.vehicles) })
+        .catch(() => {})
     } else {
       setSellerData(null)
       setDeliveries([])
@@ -369,7 +425,7 @@ function App() {
           {tab === 'news' && <NewsScreen onSelect={setSelectedProduct} t={t} />}
           {tab === 'account' && <AccountScreen account={account} orders={orders} setAccount={setAccount} onExplore={() => setTab('catalog')} onShowLogin={() => setShowLogin(true)} onShowSignup={() => setShowSignup(true)} onSelectOrder={setSelectedOrder} onSelectClient={setSelectedSellerClient} onShowRegisterSale={() => setShowRegisterSale(true)} sellerData={sellerData} t={t} />}
           {tab === 'chat' && <ChatScreen account={account} t={t} />}
-          {tab === 'deliveries' && <DeliveriesScreen deliveries={deliveries} loading={deliveriesLoading} t={t} />}
+          {tab === 'deliveries' && <DeliveriesScreen deliveries={deliveries} loading={deliveriesLoading} onNew={() => setNewDeliveryOpen(true)} onSelect={setSelectedDelivery} t={t} />}
         </main>
 
         <BottomNav tab={tab} setTab={setTab} account={account} t={t} />
@@ -396,6 +452,23 @@ function App() {
 
         {selectedSellerClient && (
           <ClientDetailSheet client={selectedSellerClient} onClose={() => setSelectedSellerClient(null)} t={t} />
+        )}
+
+        {newDeliveryOpen && (
+          <NewDeliverySheet
+            onClose={() => setNewDeliveryOpen(false)}
+            vehicles={vehiclesData}
+            account={account}
+            onCreated={(d) => {
+              setDeliveries((prev) => [d, ...prev])
+              setNewDeliveryOpen(false)
+              setToast(`Entrega ${d.code} criada com sucesso!`)
+            }}
+          />
+        )}
+
+        {selectedDelivery && (
+          <DeliveryDetailSheet delivery={selectedDelivery} onClose={() => setSelectedDelivery(null)} />
         )}
 
         {showRegisterSale && (
@@ -2105,16 +2178,7 @@ function RegisterSaleSheet({ onClose, onComplete, products, citiesData, account,
   )
 }
 
-function DeliveriesScreen({ deliveries, loading, t }) {
-  const statusColor = (status) => {
-    if (!status) return ''
-    const s = status.toLowerCase()
-    if (s.includes('entregue') || s.includes('concluí')) return 'done'
-    if (s.includes('rota') || s.includes('andamento')) return 'ongoing'
-    if (s.includes('separaç') || s.includes('pronto')) return 'ready'
-    return ''
-  }
-
+function DeliveriesScreen({ deliveries, loading, onNew, onSelect, t }) {
   return (
     <section className="account-screen">
       <div className="page-heading">
@@ -2122,6 +2186,10 @@ function DeliveriesScreen({ deliveries, loading, t }) {
         <h1>Suas entregas</h1>
         <p>Acompanhe as entregas atribuídas a você e os pedidos de cada rota.</p>
       </div>
+
+      <button type="button" className="new-delivery-btn" onClick={onNew}>
+        <Plus size={18} /> Nova entrega
+      </button>
 
       {loading ? (
         Array.from({ length: 3 }).map((_, i) => (
@@ -2134,18 +2202,21 @@ function DeliveriesScreen({ deliveries, loading, t }) {
           <p>Quando uma entrega for atribuída a você ela aparecerá aqui.</p>
         </div>
       ) : deliveries.map((delivery) => (
-        <div key={delivery.id} className="delivery-card">
+        <div key={delivery.id} className="delivery-card" role="button" tabIndex={0} onClick={() => onSelect && onSelect(delivery)} onKeyDown={(e) => e.key === 'Enter' && onSelect && onSelect(delivery)}>
           <div className="delivery-card-header">
             <div className="delivery-card-title">
               <Truck size={16} />
               <strong>{delivery.code}</strong>
             </div>
             {delivery.status && (
-              <span className={`delivery-status-badge ${statusColor(delivery.status)}`}>{delivery.status}</span>
+              <span className={`delivery-status-badge ${deliveryStatusColor(delivery.status)}`}>{delivery.status}</span>
             )}
           </div>
+          {delivery.route && (
+            <p className="delivery-route"><MapPin size={13} /> {delivery.route}</p>
+          )}
           {delivery.deliveryDate && (
-            <p className="delivery-date">Data: {new Date(delivery.deliveryDate).toLocaleDateString('pt-BR')}</p>
+            <p className="delivery-date">Saída: {new Date(delivery.deliveryDate).toLocaleDateString('pt-BR')}</p>
           )}
           {delivery.orders.length > 0 && (
             <div className="delivery-orders-list">
@@ -2153,7 +2224,7 @@ function DeliveriesScreen({ deliveries, loading, t }) {
                 <div key={order.id} className="delivery-order-item">
                   <span className="delivery-order-id">{order.id}</span>
                   <span className="delivery-order-client">{order.clientName}</span>
-                  <span className={`delivery-order-status ${statusColor(order.status)}`}>{order.status}</span>
+                  <span className={`delivery-order-status ${deliveryStatusColor(order.status)}`}>{order.status}</span>
                 </div>
               ))}
             </div>
@@ -2163,6 +2234,413 @@ function DeliveriesScreen({ deliveries, loading, t }) {
     </section>
   )
 }
+
+function NewDeliverySheet({ onClose, vehicles, account, onCreated }) {
+  const [step, setStep] = useState('route')
+  const [selectedCities, setSelectedCities] = useState([])
+  const [citySearch, setCitySearch] = useState('')
+  const [showCitySugg, setShowCitySugg] = useState(false)
+  const [selectedOrderIds, setSelectedOrderIds] = useState([])
+  const [eligibleOrders, setEligibleOrders] = useState([])
+  const [ordersLoading, setOrdersLoading] = useState(false)
+  const [form, setForm] = useState({ vehicleName: '', temperature: '-18', departureDate: '', arrivalDate: '', notes: '' })
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const cityInputRef = useRef(null)
+
+  useEffect(() => {
+    if (step === 'orders' && eligibleOrders.length === 0 && !ordersLoading) {
+      setOrdersLoading(true)
+      fetch(`${API_URL}/api/deliveries?userId=${account.id}&eligibleOrders=true`)
+        .then((r) => r.json())
+        .then((data) => { if (data.orders) setEligibleOrders(data.orders) })
+        .catch(() => {})
+        .finally(() => setOrdersLoading(false))
+    }
+  }, [step])
+
+  const citySuggestions = citySearch.trim().length >= 2
+    ? SC_CITIES.filter((c) =>
+        c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(
+          citySearch.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        ) && !selectedCities.includes(c)
+      ).slice(0, 8)
+    : []
+
+  const addCity = (city) => {
+    setSelectedCities((prev) => [...prev, city])
+    setCitySearch('')
+    setShowCitySugg(false)
+    setTimeout(() => cityInputRef.current?.focus(), 50)
+  }
+  const removeCity = (city) => setSelectedCities((prev) => prev.filter((c) => c !== city))
+  const toggleOrder = (id) => setSelectedOrderIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
+  const route = selectedCities.join(' → ')
+
+  async function submit() {
+    if (saving) return
+    setSaving(true)
+    setSaveError('')
+    try {
+      const res = await fetch(`${API_URL}/api/deliveries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: account.id,
+          route,
+          vehicleName: form.vehicleName,
+          temperature: form.temperature ? parseFloat(form.temperature) : -18.0,
+          status: 'Carregando',
+          departureDate: form.departureDate || null,
+          arrivalDate: form.arrivalDate || null,
+          notes: form.notes,
+          orderIds: selectedOrderIds,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setSaveError(data.error || 'Erro ao criar entrega.'); return }
+      onCreated({
+        id: data.id,
+        code: data.code,
+        status: 'Carregando',
+        route,
+        vehicle: form.vehicleName || '—',
+        stops: selectedCities.length,
+        temperature: form.temperature ? `${form.temperature}°C` : '-18.0°C',
+        departureDate: form.departureDate || null,
+        deliveryDate: form.departureDate || null,
+        arrivalDate: form.arrivalDate || null,
+        notes: form.notes,
+        progress: 25,
+        orderIds: selectedOrderIds,
+        orders: eligibleOrders
+          .filter((o) => selectedOrderIds.includes(o.id))
+          .map((o) => ({ id: o.id, clientName: o.clientName, status: o.status })),
+      })
+    } catch {
+      setSaveError('Não foi possível conectar ao servidor.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="sheet-backdrop" onClick={onClose}>
+      <article className="product-sheet new-delivery-sheet" onClick={(e) => e.stopPropagation()}>
+        <button className="sheet-close" type="button" onClick={onClose} aria-label="Fechar"><X size={20} /></button>
+
+        {step === 'route' && (
+          <>
+            <div className="sale-step-header">
+              <div className="sale-step-title">
+                <MapPin size={20} />
+                <h2>Rota da entrega</h2>
+                <p>Adicione as cidades que compõem a rota</p>
+              </div>
+            </div>
+            <div className="sheet-body nd-body">
+              <div className="nd-city-picker">
+                <div className="nd-city-tags">
+                  {selectedCities.map((city, idx) => (
+                    <span key={city} className="nd-city-tag">
+                      {idx > 0 && <span className="nd-city-arrow">→</span>}
+                      {city}
+                      <button type="button" onClick={() => removeCity(city)}><X size={11} /></button>
+                    </span>
+                  ))}
+                </div>
+                <div className="nd-city-search">
+                  <Search size={15} />
+                  <input
+                    ref={cityInputRef}
+                    value={citySearch}
+                    onChange={(e) => { setCitySearch(e.target.value); setShowCitySugg(true) }}
+                    onFocus={() => setShowCitySugg(true)}
+                    onBlur={() => setTimeout(() => setShowCitySugg(false), 150)}
+                    placeholder={selectedCities.length === 0 ? 'Digite uma cidade de SC...' : 'Adicionar cidade...'}
+                  />
+                </div>
+                {showCitySugg && citySuggestions.length > 0 && (
+                  <ul className="nd-city-suggestions">
+                    {citySuggestions.map((city) => (
+                      <li key={city} onMouseDown={() => addCity(city)}><MapPin size={13} /> {city}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              {selectedCities.length > 0 && (
+                <div className="nd-route-preview">
+                  <Route size={14} /> <span>{route}</span>
+                </div>
+              )}
+            </div>
+            <div className="sale-footer">
+              <button className="primary-full" type="button" disabled={selectedCities.length === 0} onClick={() => setStep('orders')}>
+                Próximo: Pedidos
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 'orders' && (
+          <>
+            <div className="sale-step-header">
+              <button type="button" className="sale-back-btn" onClick={() => setStep('route')}><ChevronLeft size={16} /> Rota</button>
+              <div className="sale-step-title">
+                <PackageCheck size={20} />
+                <h2>Pedidos da rota</h2>
+                <p>Selecione os pedidos em separação para esta entrega</p>
+              </div>
+            </div>
+            <div className="sheet-body nd-body">
+              {ordersLoading ? (
+                Array.from({ length: 3 }).map((_, i) => <div key={i} className="order-card skeleton" style={{ height: 56 }} />)
+              ) : eligibleOrders.length === 0 ? (
+                <div className="empty-account" style={{ paddingTop: 24 }}>
+                  <PackageCheck size={32} />
+                  <h2>Nenhum pedido elegível</h2>
+                  <p>Pedidos em Separação ou Pronto aparecerão aqui.</p>
+                </div>
+              ) : (
+                <div className="nd-orders-checklist">
+                  {eligibleOrders.map((o) => {
+                    const sel = selectedOrderIds.includes(o.id)
+                    return (
+                      <div key={o.id} className={`nd-order-check${sel ? ' selected' : ''}`} role="button" tabIndex={0} onClick={() => toggleOrder(o.id)} onKeyDown={(e) => e.key === 'Enter' && toggleOrder(o.id)}>
+                        <div className="nd-order-check-body">
+                          <b>{o.id}</b>
+                          <span>{o.clientName}</span>
+                          <small>{o.city}{o.value ? ` • ${o.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : ''}</small>
+                        </div>
+                        <div className="nd-order-check-right">
+                          <span className={`delivery-status-badge ${deliveryStatusColor(o.status)}`}>{o.status}</span>
+                          {sel && <Check size={17} color="var(--orange)" />}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="sale-footer">
+              <button className="primary-full" type="button" onClick={() => setStep('details')}>
+                {selectedOrderIds.length > 0 ? `Próximo: Detalhes (${selectedOrderIds.length} pedido${selectedOrderIds.length > 1 ? 's' : ''})` : 'Próximo: Detalhes'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 'details' && (
+          <>
+            <div className="sale-step-header">
+              <button type="button" className="sale-back-btn" onClick={() => setStep('orders')}><ChevronLeft size={16} /> Pedidos</button>
+              <div className="sale-step-title">
+                <Truck size={20} />
+                <h2>Detalhes da rota</h2>
+                <p>Veículo, temperatura e datas</p>
+              </div>
+            </div>
+            <div className="sheet-body nd-body">
+              <div className="sale-form">
+                <div className="sale-field">
+                  <label>Veículo / Câmara fria</label>
+                  {vehicles.length === 0 ? (
+                    <input placeholder="Ex: Câmara fria 01" value={form.vehicleName} onChange={(e) => set('vehicleName', e.target.value)} />
+                  ) : (
+                    <select value={form.vehicleName} onChange={(e) => set('vehicleName', e.target.value)}>
+                      <option value="">Selecione o veículo</option>
+                      {vehicles.map((v) => <option key={v.id} value={v.name}>{v.name}{v.plate ? ` • ${v.plate}` : ''}</option>)}
+                    </select>
+                  )}
+                </div>
+                <div className="sale-field">
+                  <label>Temperatura da câmara (°C)</label>
+                  <input type="number" placeholder="-18" value={form.temperature} onChange={(e) => set('temperature', e.target.value)} />
+                </div>
+                <div className="sale-field">
+                  <label>Data de saída</label>
+                  <input type="datetime-local" value={form.departureDate} onChange={(e) => set('departureDate', e.target.value)} />
+                </div>
+                <div className="sale-field">
+                  <label>Chegada prevista</label>
+                  <input type="datetime-local" value={form.arrivalDate} onChange={(e) => set('arrivalDate', e.target.value)} />
+                </div>
+                <div className="sale-field">
+                  <label>Observações <span>(opcional)</span></label>
+                  <textarea rows={2} value={form.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Instruções especiais, cuidados com a carga..." />
+                </div>
+              </div>
+            </div>
+            <div className="sale-footer">
+              <button className="primary-full" type="button" onClick={() => setStep('confirm')}>Revisar entrega</button>
+            </div>
+          </>
+        )}
+
+        {step === 'confirm' && (
+          <>
+            <div className="sale-step-header">
+              <button type="button" className="sale-back-btn" onClick={() => setStep('details')}><ChevronLeft size={16} /> Editar</button>
+              <div className="sale-step-title">
+                <Check size={20} />
+                <h2>Confirmar entrega</h2>
+                <p>Revise e crie a rota de entrega</p>
+              </div>
+            </div>
+            <div className="sheet-body nd-body">
+              <div className="confirm-summary">
+                <div className="confirm-row"><span>Rota</span><b>{route}</b></div>
+                {selectedOrderIds.length > 0 && (
+                  <div className="confirm-row">
+                    <span>Pedidos</span>
+                    <div className="confirm-products">
+                      {eligibleOrders.filter((o) => selectedOrderIds.includes(o.id)).map((o) => (
+                        <b key={o.id}>{o.id} <span>· {o.clientName}</span></b>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {form.vehicleName && <div className="confirm-row"><span>Veículo</span><b>{form.vehicleName}</b></div>}
+                {form.temperature && <div className="confirm-row"><span>Temperatura</span><b>{form.temperature}°C</b></div>}
+                {form.departureDate && <div className="confirm-row"><span>Saída</span><b>{new Date(form.departureDate).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}</b></div>}
+                {form.arrivalDate && <div className="confirm-row"><span>Chegada prevista</span><b>{new Date(form.arrivalDate).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}</b></div>}
+                {form.notes && <div className="confirm-row"><span>Observações</span><b>{form.notes}</b></div>}
+              </div>
+              {saveError && <p className="nd-save-error">{saveError}</p>}
+            </div>
+            <div className="sale-footer">
+              <button className="primary-full" type="button" disabled={saving} onClick={submit}>
+                {saving ? 'Criando...' : 'Criar entrega'}
+              </button>
+            </div>
+          </>
+        )}
+      </article>
+    </div>
+  )
+}
+
+function DeliveryDetailSheet({ delivery, onClose }) {
+  const statusSteps = ['Planejada', 'Carregando', 'Em rota', 'Concluída']
+  const currentStep = statusSteps.indexOf(delivery.status)
+  const isCancelled = delivery.status === 'Cancelada'
+
+  const fmtDate = (val) => {
+    if (!val) return '—'
+    try {
+      return new Date(val).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    } catch { return val }
+  }
+
+  return (
+    <div className="sheet-backdrop centered" onClick={onClose}>
+      <article className="product-sheet delivery-detail-sheet" onClick={(e) => e.stopPropagation()}>
+        <button className="sheet-close" type="button" onClick={onClose} aria-label="Fechar"><X size={20} /></button>
+
+        <div className="delivery-detail-header">
+          <span className="small-badge"><Truck size={14} /> {delivery.code}</span>
+          <h2>{delivery.route || 'Entrega'}</h2>
+          {delivery.status && (
+            <span className={`delivery-status-badge ${deliveryStatusColor(delivery.status)}`}>{delivery.status}</span>
+          )}
+        </div>
+
+        <div className="sheet-scroll">
+
+          {/* Progresso */}
+          <div className="delivery-detail-section">
+            <h4>Progresso</h4>
+            {!isCancelled ? (
+              <div className="delivery-steps">
+                {statusSteps.map((s, idx) => (
+                  <div key={s} className={`delivery-step${idx < currentStep ? ' done' : ''}${idx === currentStep ? ' active' : ''}`}>
+                    <div className="delivery-step-dot">
+                      {idx < currentStep ? <Check size={11} /> : <span>{idx + 1}</span>}
+                    </div>
+                    <span>{s}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: 'var(--red)', fontWeight: 700, margin: '10px 0 0' }}>Esta entrega foi cancelada.</p>
+            )}
+            {delivery.progress > 0 && !isCancelled && (
+              <div className="delivery-progress-bar" style={{ marginTop: 14 }}>
+                <div style={{ width: `${delivery.progress}%` }} />
+              </div>
+            )}
+          </div>
+
+          {/* Informações */}
+          <div className="delivery-detail-section">
+            <h4>Informações</h4>
+            <div className="order-detail-grid">
+              {delivery.vehicle && (
+                <div className="order-detail-item">
+                  <span>Veículo</span>
+                  <b>{delivery.vehicle}</b>
+                </div>
+              )}
+              <div className="order-detail-item">
+                <span>Paradas</span>
+                <b>{delivery.stops || '—'}</b>
+              </div>
+              {delivery.temperature && (
+                <div className="order-detail-item">
+                  <span>Temperatura</span>
+                  <b>{delivery.temperature}</b>
+                </div>
+              )}
+              <div className="order-detail-item">
+                <span>Status</span>
+                <b className="status-text">{delivery.status}</b>
+              </div>
+            </div>
+            {(delivery.departureDate || delivery.arrivalDate) && (
+              <div className="order-detail-grid" style={{ marginTop: 10 }}>
+                <div className="order-detail-item">
+                  <span>Saída</span>
+                  <b>{fmtDate(delivery.departureDate)}</b>
+                </div>
+                <div className="order-detail-item">
+                  <span>Chegada prevista</span>
+                  <b>{fmtDate(delivery.arrivalDate)}</b>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Pedidos */}
+          {delivery.orders?.length > 0 && (
+            <div className="delivery-detail-section">
+              <h4><PackageCheck size={15} /> Pedidos nesta entrega</h4>
+              <div className="delivery-orders-list">
+                {delivery.orders.map((order) => (
+                  <div key={order.id} className="delivery-order-item">
+                    <span className="delivery-order-id">{order.id}</span>
+                    <span className="delivery-order-client">{order.clientName}</span>
+                    <span className={`delivery-order-status ${deliveryStatusColor(order.status)}`}>{order.status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Observações */}
+          {delivery.notes && (
+            <div className="delivery-detail-section">
+              <h4><ClipboardList size={15} /> Observações</h4>
+              <p className="delivery-detail-notes">{delivery.notes}</p>
+            </div>
+          )}
+
+        </div>
+      </article>
+    </div>
+  )
+}
+
 
 function BottomNav({ tab, setTab, account, t }) {
   const items = [

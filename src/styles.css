@@ -1218,6 +1218,98 @@ button { -webkit-tap-highlight-color: transparent; }
   margin: 0 0 8px;
   line-height: 1.5;
 }
+
+/* ──────────────────────────────────────────────
+   Nova Entrega Button
+────────────────────────────────────────────── */
+.new-delivery-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  margin-bottom: 16px;
+  background: var(--orange);
+  color: #fff;
+  border: none;
+  border-radius: 18px;
+  font-size: .95rem;
+  font-weight: 800;
+  cursor: pointer;
+  justify-content: center;
+  transition: opacity .15s;
+}
+.new-delivery-btn:active { opacity: .8; }
+
+/* Route preview on delivery card */
+.delivery-route { display: flex; align-items: center; gap: 5px; margin: 0 0 6px; font-size: .8rem; color: var(--muted); font-weight: 700; }
+.delivery-card { cursor: pointer; }
+.delivery-card:hover { box-shadow: 0 8px 28px rgba(8,47,99,.13); }
+
+/* ──────────────────────────────────────────────
+   New Delivery Sheet
+────────────────────────────────────────────── */
+.new-delivery-sheet { display: flex; flex-direction: column; height: 92dvh; }
+.nd-body { flex: 1; overflow-y: auto; padding: 0 24px 8px; }
+
+/* City picker */
+.nd-city-picker { position: relative; border: 1.5px solid var(--line); border-radius: 16px; padding: 10px 12px; background: #fafbfc; margin-bottom: 16px; }
+.nd-city-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.nd-city-tag { display: flex; align-items: center; gap: 4px; background: var(--orange); color: #fff; border-radius: 999px; padding: 4px 10px; font-size: .82rem; font-weight: 800; }
+.nd-city-tag button { background: none; border: none; color: #fff; cursor: pointer; padding: 0; display: flex; align-items: center; }
+.nd-city-arrow { opacity: .7; margin: 0 2px; }
+.nd-city-search { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.nd-city-search input { flex: 1; border: none; background: none; outline: none; font-size: .9rem; font-weight: 600; color: var(--text); }
+.nd-city-search input::placeholder { color: var(--muted); }
+.nd-city-suggestions { position: absolute; left: 0; right: 0; top: calc(100% + 4px); background: #fff; border: 1.5px solid var(--line); border-radius: 14px; box-shadow: 0 8px 24px rgba(8,47,99,.1); padding: 6px 0; z-index: 10; list-style: none; margin: 0; max-height: 220px; overflow-y: auto; }
+.nd-city-suggestions li { display: flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: .88rem; font-weight: 700; color: var(--navy); cursor: pointer; }
+.nd-city-suggestions li:hover { background: var(--cream); }
+
+/* Route preview */
+.nd-route-preview { display: flex; align-items: flex-start; gap: 8px; padding: 12px 14px; background: rgba(242,106,0,.07); border-radius: 14px; font-size: .85rem; font-weight: 700; color: var(--orange); flex-wrap: wrap; }
+.nd-route-preview span { flex: 1; line-height: 1.5; }
+
+/* Orders checklist */
+.nd-orders-checklist { display: flex; flex-direction: column; gap: 10px; }
+.nd-order-check { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1.5px solid var(--line); border-radius: 16px; background: #fff; cursor: pointer; transition: border-color .15s, background .15s; }
+.nd-order-check.selected { border-color: var(--orange); background: rgba(242,106,0,.05); }
+.nd-order-check-body { flex: 1; min-width: 0; }
+.nd-order-check-body b { display: block; font-size: .85rem; color: var(--navy); font-family: 'Montserrat', sans-serif; }
+.nd-order-check-body span { display: block; font-size: .82rem; color: var(--text); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 2px 0; }
+.nd-order-check-body small { font-size: .78rem; color: var(--muted); font-weight: 700; }
+.nd-order-check-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+
+/* Save error */
+.nd-save-error { color: var(--orange); font-weight: 700; font-size: .85rem; margin: 8px 0 0; }
+
+/* ──────────────────────────────────────────────
+   Delivery Detail Sheet
+────────────────────────────────────────────── */
+.delivery-detail-sheet { display: flex; flex-direction: column; max-height: 92dvh; }
+.delivery-detail-header { padding: 24px 24px 16px; border-bottom: 1px solid var(--line); }
+.delivery-detail-header .small-badge { margin-bottom: 6px; }
+.delivery-detail-header h2 { margin: 4px 0 10px; color: var(--navy); font-family: 'Montserrat', sans-serif; font-size: 1.1rem; line-height: 1.3; }
+.sheet-scroll { flex: 1; overflow-y: auto; padding: 0 24px 28px; }
+.delivery-detail-section { margin-top: 22px; }
+.delivery-detail-section h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 12px; font-size: .8rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+
+/* Progress steps */
+.delivery-steps { display: flex; gap: 0; }
+.delivery-step { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
+.delivery-step:not(:last-child)::after { content: ''; position: absolute; top: 13px; left: 50%; width: 100%; height: 2px; background: var(--line); z-index: 0; }
+.delivery-step.done:not(:last-child)::after { background: var(--orange); }
+.delivery-step-dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--line); color: var(--muted); font-size: .75rem; font-weight: 800; z-index: 1; position: relative; transition: background .2s; }
+.delivery-step.done .delivery-step-dot { background: var(--orange); color: #fff; }
+.delivery-step.active .delivery-step-dot { background: var(--navy); color: #fff; box-shadow: 0 0 0 3px rgba(8,47,99,.15); }
+.delivery-step span { font-size: .68rem; font-weight: 800; color: var(--muted); margin-top: 5px; text-align: center; }
+.delivery-step.done span, .delivery-step.active span { color: var(--navy); }
+
+/* Progress bar */
+.delivery-progress-bar { height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; }
+.delivery-progress-bar div { height: 100%; background: var(--orange); border-radius: 999px; transition: width .4s ease; }
+
+/* Notes */
+.delivery-detail-notes { margin: 0; color: var(--muted); font-weight: 600; line-height: 1.6; font-size: .88rem; }
 .order-confirm-sub {
   color: var(--muted) !important;
   font-size: .82rem !important;
