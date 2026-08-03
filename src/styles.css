@@ -1228,6 +1228,7 @@ button { -webkit-tap-highlight-color: transparent; }
   gap: 8px;
   width: 100%;
   padding: 14px 20px;
+  margin-top: 16px;
   margin-bottom: 16px;
   background: var(--orange);
   color: #fff;
